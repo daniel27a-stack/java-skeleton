@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+{{#if withPublish}}
+    id 'maven-publish'
+{{/if}}
+}
+
+group = '{{groupId}}'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of({{javaVersion}})
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // api '...'            // dependencias que se exponen a los consumidores
+    // implementation '...' // dependencias internas
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.withType(Javadoc).configureEach {
+    // no fallar/quejarse por comentarios faltantes en el esqueleto generado
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+{{#if withPublish}}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+    // repositories {
+    //     maven {
+    //         name = 'GitHubPackages'
+    //         url = uri('https://maven.pkg.github.com/daniel27a-stack/{{artifactId}}')
+    //         credentials {
+    //             username = System.getenv('GITHUB_ACTOR')
+    //             password = System.getenv('GITHUB_TOKEN')
+    //         }
+    //     }
+    // }
+}
+{{/if}}

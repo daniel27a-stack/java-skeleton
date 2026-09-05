@@ -1,0 +1,19 @@
+{
+  "templates": [
+    {
+      "id": "spring-gradle",
+      "label": "Servicio REST — Spring Boot + Gradle",
+      "prompts": ["port"]
+    },
+    {
+      "id": "java-app",
+      "label": "App / CLI Java ejecutable + Gradle",
+      "prompts": []
+    },
+    {
+      "id": "java-library",
+      "label": "Librería Java reutilizable + Gradle",
+      "prompts": ["withPublish"]
+    }
+  ]
+}

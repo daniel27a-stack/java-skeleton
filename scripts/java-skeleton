@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Wrapper para no escribir el docker run largo cada vez.
+# Copialo a ~/.local/bin/java-skeleton y hacelo ejecutable (chmod +x).
+set -euo pipefail
+
+IMAGE="${JAVA_SKELETON_IMAGE:-ghcr.io/daniel27a-stack/java-skeleton:latest}"
+
+exec docker run --rm -it \
+  -u "$(id -u):$(id -g)" \
+  -v "$PWD:/work" -w /work \
+  "$IMAGE" "$@"
