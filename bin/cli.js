@@ -140,7 +140,7 @@ async function main() {
   const serviceName = await ask('name', 'Nombre del proyecto:', 'mi-servicio');
   const groupId = await ask('group', 'Group ID:', 'com.empresa', validateGroup);
   const artifactId = await ask('artifact', 'Artifact ID:', serviceName, validateArtifact);
-  const javaVersion = await ask('java', `Versión de Java (${JAVA_VERSIONS.join('/')}):`, '21', validateJava);
+  const javaVersion = await ask('java', `Versión de Java (${JAVA_VERSIONS.join('/')}):`, '25', validateJava);
 
   let port = '8080';
   if (template.prompts.includes('port')) {

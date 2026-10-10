@@ -31,7 +31,7 @@ Modo no interactivo:
 ```bash
 docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
   ghcr.io/daniel27a-stack/java-skeleton \
-  --yes --template java-library --name mi-lib --group com.acme --artifact mi-lib --java 21 --with-publish
+  --yes --template java-library --name mi-lib --group com.acme --artifact mi-lib --java 25 --with-publish
 ```
 
 ### Alias corto
@@ -84,7 +84,7 @@ docker build -t java-skeleton:dev .
 # Probar
 D=$(mktemp -d)
 docker run --rm -u "$(id -u):$(id -g)" -v "$D:/work" java-skeleton:dev \
-  --yes --template spring-gradle --name demo --group com.acme --artifact demo --java 21
+  --yes --template spring-gradle --name demo --group com.acme --artifact demo --java 25
 cd "$D/demo" && ./gradlew build
 ```
 
