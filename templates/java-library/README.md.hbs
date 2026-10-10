@@ -1,25 +1,25 @@
 # {{artifactId}}
 
-Librería Java generada con `java-skeleton` (Gradle + plugin `java-library`).
+Java library generated with `java-skeleton` (Gradle + `java-library` plugin).
 
-## Build y tests
+## Build and test
 
 ```bash
 ./gradlew build
 ```
 
-## Publicar
+## Publish
 
 {{#if withPublish}}
-Publicación local (para consumirla desde otro proyecto en la misma máquina):
+Local publishing (to consume it from another project on the same machine):
 
 ```bash
 ./gradlew publishToMavenLocal
 ```
 
-Descomentá el bloque `repositories` en `build.gradle` para publicar a GitHub Packages
-u otro repositorio Maven.
+Uncomment the `repositories` block in `build.gradle` to publish to GitHub Packages
+or another Maven repository.
 {{else}}
-Este proyecto no incluye `maven-publish`. Regeneralo con `--with-publish` o agregá el
-plugin a mano en `build.gradle`.
+This project does not include `maven-publish`. Regenerate it with `--with-publish` or add
+the plugin manually in `build.gradle`.
 {{/if}}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Wrapper para no escribir el docker run largo cada vez.
-# Copialo a ~/.local/bin/java-skeleton y hacelo ejecutable (chmod +x).
+# Wrapper to avoid typing the long docker run command every time.
+# Copy it to ~/.local/bin/java-skeleton and make it executable (chmod +x).
 set -euo pipefail
 
 IMAGE="${JAVA_SKELETON_IMAGE:-ghcr.io/daniel27a-stack/java-skeleton:latest}"

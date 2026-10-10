@@ -7,6 +7,6 @@ RUN npm ci --omit=dev
 COPY bin ./bin
 COPY templates ./templates
 
-# El proyecto se genera en el directorio de trabajo, que se monta con -v
+# The project is generated in the working directory, mounted with -v
 WORKDIR /work
 ENTRYPOINT ["node", "/app/bin/cli.js"]

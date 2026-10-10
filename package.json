@@ -1,7 +1,7 @@
 {
   "name": "java-skeleton",
   "version": "0.1.0",
-  "description": "Genera esqueletos de proyectos Java + Gradle (Spring Boot REST, app/CLI o librería)",
+  "description": "Generates Java + Gradle project skeletons (Spring Boot REST service, app/CLI or library)",
   "type": "module",
   "bin": {
     "java-skeleton": "./bin/cli.js"

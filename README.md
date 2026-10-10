@@ -1,19 +1,19 @@
 # java-skeleton
 
-Generador de esqueletos de proyectos **Java + Gradle**. Tres templates:
+Project skeleton generator for **Java + Gradle**. Three templates:
 
-| Template        | Plugin Gradle                | Para qué                         |
+| Template        | Gradle plugin                | Purpose                          |
 |-----------------|------------------------------|----------------------------------|
-| `spring-gradle` | `org.springframework.boot`   | Servicio REST Spring Boot        |
-| `java-app`      | `application`                | App / herramienta CLI ejecutable |
-| `java-library`  | `java-library`               | Librería reutilizable            |
+| `spring-gradle` | `org.springframework.boot`   | Spring Boot REST service         |
+| `java-app`      | `application`                | Executable app / CLI tool        |
+| `java-library`  | `java-library`               | Reusable library                 |
 
-El proyecto generado trae el **Gradle wrapper embebido**, así que se compila con
-`./gradlew build` sin necesidad de tener Gradle instalado (solo un JDK).
+The generated project ships with the **Gradle wrapper embedded**, so it builds with
+`./gradlew build` without Gradle installed (only a JDK is needed).
 
 ---
 
-## Uso con Docker (no requiere Node)
+## Usage with Docker (no Node required)
 
 ```bash
 docker run --rm -it \
@@ -22,21 +22,21 @@ docker run --rm -it \
   ghcr.io/daniel27a-stack/java-skeleton
 ```
 
-- `-it` → prompts interactivos.
-- `-u "$(id -u):$(id -g)"` → los archivos generados quedan con tu usuario, no como `root`.
-- `-v "$PWD:/work"` → el proyecto aparece en tu carpeta actual.
+- `-it` → interactive prompts.
+- `-u "$(id -u):$(id -g)"` → generated files are owned by your user, not `root`.
+- `-v "$PWD:/work"` → the project appears in your current folder.
 
-Modo no interactivo:
+Non-interactive mode:
 
 ```bash
 docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
   ghcr.io/daniel27a-stack/java-skeleton \
-  --yes --template java-library --name mi-lib --group com.acme --artifact mi-lib --java 25 --with-publish
+  --yes --template java-library --name my-lib --group com.acme --artifact my-lib --java 25 --with-publish
 ```
 
-### Alias corto
+### Short alias
 
-Copiá `scripts/java-skeleton` a `~/.local/bin/` y luego:
+Copy `scripts/java-skeleton` to `~/.local/bin/` and then:
 
 ```bash
 java-skeleton --template spring-gradle
@@ -44,11 +44,11 @@ java-skeleton --template spring-gradle
 
 ---
 
-## Uso con npx / npm (requiere Node >= 20)
+## Usage with npx / npm (requires Node >= 20)
 
 ```bash
 npm create java-service@latest
-# o
+# or
 npx java-skeleton
 ```
 
@@ -56,37 +56,39 @@ npx java-skeleton
 
 ## Flags
 
-| Flag                     | Descripción                                        |
+| Flag                     | Description                                       |
 |--------------------------|---------------------------------------------------|
 | `-t, --template <id>`    | `spring-gradle` \| `java-app` \| `java-library`   |
-| `-n, --name <nombre>`    | Nombre del proyecto                               |
-| `-g, --group <groupId>`  | Group id, ej: `com.empresa`                       |
-| `-a, --artifact <id>`    | Artifact id (nombre de la carpeta de salida)      |
-| `-j, --java <version>`   | `17` \| `21` \| `25`                              |
-| `-p, --port <puerto>`    | Puerto (solo `spring-gradle`)                     |
-| `--with-publish`         | Incluir `maven-publish` (solo `java-library`)     |
-| `-d, --dir <ruta>`       | Directorio base donde crear el proyecto           |
-| `-y, --yes`              | No preguntar; usar defaults para lo que falte     |
+| `-n, --name <name>`      | Project name                                      |
+| `-g, --group <groupId>`  | Group id, e.g. `com.example`                      |
+| `-a, --artifact <id>`    | Artifact id (name of the output folder)           |
+| `-j, --java <version>`   | `17` \| `21` \| `25` (default `25`)               |
+| `-p, --port <port>`      | Port (`spring-gradle` only)                       |
+| `--with-publish`         | Include `maven-publish` (`java-library` only)     |
+| `-d, --dir <path>`       | Base directory where the project is created       |
+| `-y, --yes`              | Do not prompt; use defaults for anything missing  |
 
 ---
 
-## Desarrollo
+## Development
 
-Todo se puede hacer sin Node local, vía contenedores descartables:
+Everything can be done without a local Node install, using throwaway containers:
 
 ```bash
-# Regenerar el lockfile
+# Regenerate the lockfile
 docker run --rm -v "$PWD":/app -w /app node:22-alpine npm install --package-lock-only
 
-# Construir la imagen
+# Build the image
 docker build -t java-skeleton:dev .
 
-# Probar
+# Try it
 D=$(mktemp -d)
 docker run --rm -u "$(id -u):$(id -g)" -v "$D:/work" java-skeleton:dev \
   --yes --template spring-gradle --name demo --group com.acme --artifact demo --java 25
 cd "$D/demo" && ./gradlew build
 ```
 
-Publicación (imagen a GHCR + paquete a npm) vía `.github/workflows/release.yml` al
-pushear un tag `v*`.
+Publishing (image to GHCR + package to npm) runs through `.github/workflows/release.yml`
+when a `v*` tag is pushed.
+
+See [`DEVLOG.md`](DEVLOG.md) for the log of changes and decisions.

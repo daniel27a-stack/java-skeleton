@@ -21,8 +21,8 @@ repositories {
 }
 
 dependencies {
-    // api '...'            // dependencias que se exponen a los consumidores
-    // implementation '...' // dependencias internas
+    // api '...'            // dependencies exposed to consumers
+    // implementation '...' // internal dependencies
     testImplementation platform('org.junit:junit-bom:6.1.3')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -33,7 +33,7 @@ tasks.named('test') {
 }
 
 tasks.withType(Javadoc).configureEach {
-    // no fallar/quejarse por comentarios faltantes en el esqueleto generado
+    // do not fail/warn about missing comments in the generated skeleton
     options.addStringOption('Xdoclint:all,-missing', '-quiet')
 }
 {{#if withPublish}}

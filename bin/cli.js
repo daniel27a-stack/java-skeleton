@@ -20,17 +20,17 @@ const ARTIFACT_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const program = new Command();
 program
   .name('java-skeleton')
-  .description('Genera un esqueleto de proyecto Java + Gradle (Spring Boot REST, app/CLI o librería)')
+  .description('Generates a Java + Gradle project skeleton (Spring Boot REST service, app/CLI or library)')
   .version(pkg.version)
-  .option('-t, --template <id>', `template a usar (${manifest.templates.map((t) => t.id).join(', ')})`)
-  .option('-n, --name <nombre>', 'nombre del proyecto/servicio')
-  .option('-g, --group <groupId>', 'group id, ej: com.empresa')
-  .option('-a, --artifact <artifactId>', 'artifact id (carpeta de salida)')
-  .option('-j, --java <version>', `versión de Java (${JAVA_VERSIONS.join(' | ')})`)
-  .option('-p, --port <puerto>', 'puerto del servicio (solo spring-gradle)')
-  .option('--with-publish', 'incluir configuración maven-publish (solo java-library)')
-  .option('-d, --dir <ruta>', 'directorio base donde crear el proyecto', process.cwd())
-  .option('-y, --yes', 'no preguntar; usar defaults para lo que falte')
+  .option('-t, --template <id>', `template to use (${manifest.templates.map((t) => t.id).join(', ')})`)
+  .option('-n, --name <name>', 'project/service name')
+  .option('-g, --group <groupId>', 'group id, e.g. com.example')
+  .option('-a, --artifact <artifactId>', 'artifact id (output folder)')
+  .option('-j, --java <version>', `Java version (${JAVA_VERSIONS.join(' | ')})`)
+  .option('-p, --port <port>', 'service port (spring-gradle only)')
+  .option('--with-publish', 'include maven-publish setup (java-library only)')
+  .option('-d, --dir <path>', 'base directory where the project is created', process.cwd())
+  .option('-y, --yes', 'do not prompt; use defaults for anything missing')
   .parse();
 
 const opts = program.opts();
@@ -40,29 +40,29 @@ function fail(msg) {
   process.exit(1);
 }
 
-// Sin terminal interactiva no se puede preguntar: exigir --yes (o flags + --yes).
+// Without an interactive terminal we cannot prompt: require --yes (or flags + --yes).
 if (!process.stdin.isTTY && !opts.yes) {
   fail(
-    'no hay terminal interactiva.\n' +
-      '  - Para el modo interactivo: agregá -it al docker run.\n' +
-      '  - Para modo desatendido: pasá --yes junto con los flags (--template, --name, --group, --artifact, --java).',
+    'no interactive terminal.\n' +
+      '  - For interactive mode: add -it to docker run.\n' +
+      '  - For unattended mode: pass --yes along with the flags (--template, --name, --group, --artifact, --java).',
   );
 }
 
 function validateGroup(v) {
-  return GROUP_RE.test(v) || 'formato inválido (ej: com.empresa.proyecto)';
+  return GROUP_RE.test(v) || 'invalid format (e.g. com.example.project)';
 }
 
 function validateArtifact(v) {
-  return ARTIFACT_RE.test(v) || 'solo minúsculas, números y guiones, ej: mi-servicio';
+  return ARTIFACT_RE.test(v) || 'lowercase letters, digits and hyphens only, e.g. my-service';
 }
 
 function validateJava(v) {
-  return JAVA_VERSIONS.includes(v) || `elegí una de: ${JAVA_VERSIONS.join(', ')}`;
+  return JAVA_VERSIONS.includes(v) || `choose one of: ${JAVA_VERSIONS.join(', ')}`;
 }
 
 function validatePort(v) {
-  return /^\d{2,5}$/.test(v) || 'puerto inválido';
+  return /^\d{2,5}$/.test(v) || 'invalid port';
 }
 
 function toPascalCase(str) {
@@ -77,19 +77,19 @@ async function resolveTemplate() {
   if (opts.template) {
     const t = manifest.templates.find((x) => x.id === opts.template);
     if (!t) {
-      fail(`template desconocido: ${opts.template}. Opciones: ${manifest.templates.map((x) => x.id).join(', ')}`);
+      fail(`unknown template: ${opts.template}. Options: ${manifest.templates.map((x) => x.id).join(', ')}`);
     }
     return t;
   }
   if (opts.yes) return manifest.templates[0];
   const id = await select({
-    message: 'Tipo de proyecto:',
+    message: 'Project type:',
     choices: manifest.templates.map((t) => ({ name: t.label, value: t.id })),
   });
   return manifest.templates.find((t) => t.id === id);
 }
 
-// Devuelve el valor de un flag (validándolo) o pregunta; con --yes usa el default.
+// Returns a flag's value (validated) or prompts for it; with --yes uses the default.
 async function ask(flag, message, def, validate) {
   const provided = opts[flag];
   if (provided != null) {
@@ -122,13 +122,13 @@ async function renderDir(srcDir, destDir, context) {
       const rendered = Handlebars.compile(raw, { noEscape: true })(context);
       await fs.writeFile(destPath, rendered);
     } else {
-      // binario o verbatim (gradle-wrapper.jar, gradlew, ...)
+      // binary or verbatim (gradle-wrapper.jar, gradlew, ...)
       await fs.copyFile(srcPath, destPath);
     }
   }
 }
 
-// Quita el sufijo .hbs y sustituye {{token}} en nombres de archivo/carpeta.
+// Strips the .hbs suffix and replaces {{token}} in file/folder names.
 function renderName(segment, context) {
   const base = segment.endsWith('.hbs') ? segment.slice(0, -4) : segment;
   return base.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? '');
@@ -137,20 +137,20 @@ function renderName(segment, context) {
 async function main() {
   const template = await resolveTemplate();
 
-  const serviceName = await ask('name', 'Nombre del proyecto:', 'mi-servicio');
-  const groupId = await ask('group', 'Group ID:', 'com.empresa', validateGroup);
+  const serviceName = await ask('name', 'Project name:', 'my-service');
+  const groupId = await ask('group', 'Group ID:', 'com.example', validateGroup);
   const artifactId = await ask('artifact', 'Artifact ID:', serviceName, validateArtifact);
-  const javaVersion = await ask('java', `Versión de Java (${JAVA_VERSIONS.join('/')}):`, '25', validateJava);
+  const javaVersion = await ask('java', `Java version (${JAVA_VERSIONS.join('/')}):`, '25', validateJava);
 
   let port = '8080';
   if (template.prompts.includes('port')) {
-    port = await ask('port', 'Puerto del servicio:', '8080', validatePort);
+    port = await ask('port', 'Service port:', '8080', validatePort);
   }
 
   let withPublish = false;
   if (template.prompts.includes('withPublish')) {
     if (opts.withPublish) withPublish = true;
-    else if (!opts.yes) withPublish = await confirm({ message: '¿Incluir maven-publish?', default: false });
+    else if (!opts.yes) withPublish = await confirm({ message: 'Include maven-publish?', default: false });
   }
 
   const context = {
@@ -168,7 +168,7 @@ async function main() {
   const targetDir = path.join(path.resolve(opts.dir || process.cwd()), artifactId);
 
   if (await fs.pathExists(targetDir)) {
-    fail(`ya existe "${targetDir}"; elegí otro artifact id o borrá esa carpeta.`);
+    fail(`"${targetDir}" already exists; choose another artifact id or delete that folder.`);
   }
 
   await renderDir(templateDir, targetDir, context);
@@ -177,12 +177,12 @@ async function main() {
   if (await fs.pathExists(gradlew)) await fs.chmod(gradlew, 0o755);
 
   const rel = path.relative(process.cwd(), targetDir) || artifactId;
-  console.log(`\n✔ Proyecto "${artifactId}" (${template.id}) creado en ${targetDir}\n`);
+  console.log(`\n✔ Project "${artifactId}" (${template.id}) created in ${targetDir}\n`);
   console.log(`  cd ${rel}`);
   console.log(`  ./gradlew build\n`);
 }
 
 main().catch((err) => {
-  if (err && err.name === 'ExitPromptError') process.exit(130); // Ctrl-C en un prompt
+  if (err && err.name === 'ExitPromptError') process.exit(130); // Ctrl-C at a prompt
   fail(err?.message || String(err));
 });
