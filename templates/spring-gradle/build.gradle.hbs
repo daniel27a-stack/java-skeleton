@@ -1,27 +1,14 @@
 plugins {
-    id 'org.springframework.boot' version '4.1.1'
-    id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
+    alias(libs.plugins.spring.boot)
 }
 
 group = '{{groupId}}'
 version = '0.0.1-SNAPSHOT'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of({{javaVersion}})
-    }
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
-}
+apply from: 'gradle/repositories.gradle'
+apply from: 'gradle/java.gradle'
+apply from: 'gradle/sources.gradle'
+apply from: 'gradle/dependencies.gradle'
+apply from: 'gradle/constraints.gradle'
+apply from: 'gradle/tests.gradle'

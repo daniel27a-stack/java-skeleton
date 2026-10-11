@@ -6,26 +6,13 @@ plugins {
 group = '{{groupId}}'
 version = '0.1.0'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of({{javaVersion}})
-    }
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation platform('org.junit:junit-bom:6.1.3')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
 application {
     mainClass = '{{groupId}}.Main'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
-}
+apply from: 'gradle/repositories.gradle'
+apply from: 'gradle/java.gradle'
+apply from: 'gradle/sources.gradle'
+apply from: 'gradle/dependencies.gradle'
+apply from: 'gradle/constraints.gradle'
+apply from: 'gradle/tests.gradle'

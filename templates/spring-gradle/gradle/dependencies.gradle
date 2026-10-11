@@ -1,0 +1,9 @@
+// Project dependencies. Versions live in gradle/libs.versions.toml;
+// libraries managed by the Spring Boot BOM are declared without a version.
+dependencies {
+    implementation platform(libs.spring.boot.bom)
+
+    implementation libs.spring.boot.starter.webmvc
+
+    testImplementation libs.spring.boot.starter.webmvc.test
+}

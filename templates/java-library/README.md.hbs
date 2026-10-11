@@ -17,7 +17,7 @@ Local publishing (to consume it from another project on the same machine):
 ./gradlew publishToMavenLocal
 ```
 
-Uncomment the `repositories` block in `build.gradle` to publish to GitHub Packages
+Uncomment the `repositories` block in `gradle/publish.gradle` to publish to GitHub Packages
 or another Maven repository.
 {{else}}
 This project does not include `maven-publish`. Regenerate it with `--with-publish` or add

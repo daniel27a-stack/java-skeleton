@@ -1,0 +1,9 @@
+// Project dependencies. Versions live in gradle/libs.versions.toml.
+dependencies {
+    // api '...'            // dependencies exposed to consumers
+    // implementation '...' // internal dependencies
+
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.platform.launcher
+}

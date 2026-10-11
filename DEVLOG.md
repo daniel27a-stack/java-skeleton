@@ -7,7 +7,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 ## Template plan (defined 2026-10-10)
 
 1. ✅ Spring Boot 4 + Java 25
-2. ⬜ Gradle split into `gradle/*.gradle`
+2. ✅ Gradle split into `gradle/*.gradle`
 3. ⬜ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
 4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
 5. ⬜ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
@@ -21,6 +21,9 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-10 | Java 25 + Spring Boot 4 by default | Current LTS; the reference work stack already migrated (see Step 1) |
 | 2026-10-10 | Versions in the **Gradle version catalog** (`gradle/libs.versions.toml`), not `ext {}` variables | Functionally equivalent, but it also centralizes plugin versions, Dependabot/Renovate understand it and IntelliJ autocompletes it. Dependencies managed by the Spring Boot BOM are declared without a version |
 | 2026-10-10 | Dependency update bot: **undecided** | Manual control preferred; to be decided once CI exists |
+| 2026-10-11 | **Three layers**: `gradle/` (build and verify), `ci/` (deploy and run, e.g. `ci/docker/Dockerfile`), `.github/workflows/` (when to run) | The pipeline only calls Gradle tasks, so everything runs the same locally and in CI. The `ci/` name is kept from the reference work stack, even if it mostly holds deployment files |
+| 2026-10-11 | Spring Boot BOM imported as a **Gradle `platform()`**; the `io.spring.dependency-management` plugin is no longer used | With the plugin, the BOM overrides native Gradle constraints. As a platform, `constraints { ... because(...) }` work for every dependency. Verified: same resolved dependencies as before |
+| 2026-10-11 | Forced versions: **`constraints` + `because` by default**, `resolutionStrategy.eachDependency` only as an escape hatch | Constraints document the reason (visible in `dependencyInsight`); the escape hatch covers group-wide or conditional rules |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
 ---
@@ -57,3 +60,37 @@ Dockerfile, `package.json`, `manifest.json` labels and every template file (READ
 sample code, tests, comments) translated to English. Sample greetings are now
 `Hello from <service>` / `Hello, world!`. CLI defaults: `my-service`, `com.example`.
 `BITACORA.md` renamed to `DEVLOG.md`; `PLAN.md` removed.
+
+## 2026-10-11 — Step 2: Gradle split into `gradle/*.gradle`
+
+**What:** every template now generates a short `build.gradle` (plugins, group, version and
+`apply from`) plus one file per concern:
+
+| File | Purpose |
+|---|---|
+| `gradle/libs.versions.toml` | Version catalog (versions, libraries, plugins) |
+| `gradle/repositories.gradle` | Where dependencies come from (private repos go here) |
+| `gradle/java.gradle` | Toolchain, encoding (+ sources/javadoc jars in `java-library`) |
+| `gradle/sources.gradle` | Extra source sets and their tasks (filled in Step 3) |
+| `gradle/dependencies.gradle` | Project dependencies |
+| `gradle/constraints.gradle` | Forced versions, with commented examples of both mechanisms |
+| `gradle/tests.gradle` | Test task configuration |
+| `gradle/publish.gradle` | `java-library` only, generated only with `--with-publish` |
+
+- `spring-gradle` imports the Spring Boot BOM with `platform(libs.spring.boot.bom)` instead of
+  the `io.spring.dependency-management` plugin.
+- CLI: a `.hbs` file that renders to blank text is skipped, so optional files can be wrapped
+  in `{{#if flag}}`.
+
+**Verification:**
+- Resolved dependencies (compile/runtime/test classpaths) of the 3 templates compared against
+  a baseline taken before the change: identical.
+- `./gradlew build` green in all templates (and `java-library` with and without `--with-publish`);
+  `publishToMavenLocal` works; `java-library` without the flag has no `publish.gradle`.
+- `spring-gradle` jar starts in ~1.9 s and `GET /hello` responds.
+- Constraint vs BOM: forcing `tomcat-embed-core` 11.0.26 over the BOM's 11.0.24 with a
+  `constraint` wins and `dependencyInsight` shows the `because` reason; the `eachDependency`
+  escape hatch aligns the whole `org.apache.tomcat.embed` group and also reports its reason.
+- Control test with the previous setup (`io.spring.dependency-management` plugin): the same
+  constraint asking for 11.0.26 is overridden back to 11.0.24 ("Selected by rule"). This is why
+  that setup needs `ext['<lib>.version']` overrides, and why the plugin was dropped.

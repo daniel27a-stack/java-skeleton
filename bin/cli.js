@@ -120,6 +120,8 @@ async function renderDir(srcDir, destDir, context) {
     if (entry.name.endsWith('.hbs')) {
       const raw = await fs.readFile(srcPath, 'utf-8');
       const rendered = Handlebars.compile(raw, { noEscape: true })(context);
+      // A template that renders to nothing (e.g. wrapped in {{#if flag}}) is optional: skip it.
+      if (rendered.trim() === '') continue;
       await fs.writeFile(destPath, rendered);
     } else {
       // binary or verbatim (gradle-wrapper.jar, gradlew, ...)

@@ -1,0 +1,10 @@
+// Java toolchain and compiler settings.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of({{javaVersion}})
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

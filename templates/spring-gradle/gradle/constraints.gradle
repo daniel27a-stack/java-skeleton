@@ -1,0 +1,24 @@
+// Forced dependency versions (e.g. to fix a CVE in a transitive dependency).
+//
+// 1) Default: a constraint with its reason. Keep the version in libs.versions.toml.
+//
+// dependencies {
+//     constraints {
+//         implementation('org.apache.commons:commons-lang3') {
+//             version { require libs.versions.commons.lang3.get() }
+//             because 'CVE-YYYY-NNNNN'
+//         }
+//     }
+// }
+//
+// 2) Escape hatch, only when a constraint is not enough
+//    (e.g. align a whole group, or rules that depend on the requested module).
+//
+// configurations.configureEach {
+//     resolutionStrategy.eachDependency { details ->
+//         if (details.requested.group == 'com.example.group') {
+//             details.useVersion '1.2.3'
+//             details.because 'CVE-YYYY-NNNNN'
+//         }
+//     }
+// }

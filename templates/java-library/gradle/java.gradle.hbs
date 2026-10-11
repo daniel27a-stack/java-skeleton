@@ -1,0 +1,17 @@
+// Java toolchain, compiler and javadoc settings.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of({{javaVersion}})
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
+    // do not fail/warn about missing comments in the generated skeleton
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
