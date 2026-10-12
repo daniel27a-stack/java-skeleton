@@ -75,7 +75,7 @@ sample code, tests, comments) translated to English. Sample greetings are now
 | `gradle/libs.versions.toml` | Version catalog (versions, libraries, plugins) |
 | `gradle/repositories.gradle` | Where dependencies come from (private repos go here) |
 | `gradle/java.gradle` | Toolchain, encoding (+ sources/javadoc jars in `java-library`) |
-| `gradle/sources.gradle` | Extra source sets and their tasks (filled in Step 3: `intTest`, `archTest`) |
+| `gradle/sources.gradle` | Extra source sets and their tasks (`intTest` and `archTest` since Step 3) |
 | `gradle/dependencies.gradle` | Project dependencies |
 | `gradle/constraints.gradle` | Forced versions, with commented examples of both mechanisms |
 | `gradle/tests.gradle` | Test task configuration |
@@ -113,3 +113,7 @@ gets a sample `HelloService` (the controller delegates to it) and a WireMock sam
 java-library with and without `--with-publish`); `compileClasspath` and `runtimeClasspath`
 identical to the baseline taken before the change; layer filtering, unknown-layer error, empty-layer
 failure and rule violations (business package, package cycle) checked on generated projects.
+
+`publishToMavenLocal` works, `gradlew run` prints the greeting in `java-app`, and the
+`spring-gradle` jar answers `GET /hello` as before. `check` runs `test` first even when the
+tasks are requested in reverse order. WireMock is only on the `spring-gradle` `intTest` classpath.
