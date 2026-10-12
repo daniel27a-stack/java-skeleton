@@ -70,6 +70,24 @@ npx java-skeleton
 
 ---
 
+## Generated project: test suites
+
+Every template generates three test suites, all run by `./gradlew check` (`test` first) and
+each runnable alone:
+
+| Suite      | Directory      | Command              |
+|------------|----------------|----------------------|
+| `test`     | `src/test`     | `./gradlew test`     |
+| `intTest`  | `src/intTest`  | `./gradlew intTest`  |
+| `archTest` | `src/archTest` | `./gradlew archTest` |
+
+`spring-gradle` includes WireMock in `intTest`. `archTest` (ArchUnit) enforces the
+`controller -> service -> repository | client` layers; a layer the project does not have is
+opted out with `archTest.excludeLayers` in `gradle.properties`, and each layer rule is tagged
+`layer-<layer>`.
+
+---
+
 ## Development
 
 Everything can be done without a local Node install, using throwaway containers:

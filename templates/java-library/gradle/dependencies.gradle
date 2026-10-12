@@ -6,4 +6,13 @@ dependencies {
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.platform.launcher
+
+    intTestImplementation platform(libs.junit.bom)
+    intTestImplementation libs.junit.jupiter
+    intTestRuntimeOnly libs.junit.platform.launcher
+
+    archTestImplementation platform(libs.junit.bom)
+    archTestImplementation libs.junit.jupiter
+    archTestImplementation libs.archunit.junit5
+    archTestRuntimeOnly libs.junit.platform.launcher
 }

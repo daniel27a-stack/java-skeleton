@@ -8,7 +8,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 
 1. ✅ Spring Boot 4 + Java 25
 2. ✅ Gradle split into `gradle/*.gradle`
-3. ⬜ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
+3. ✅ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
 4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
 5. ⬜ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
 6. ⬜ Multi-stage `Dockerfile` with Spring Boot layers
@@ -25,6 +25,9 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-11 | Spring Boot BOM imported as a **Gradle `platform()`**; the `io.spring.dependency-management` plugin is no longer used | With the plugin, the BOM overrides native Gradle constraints. As a platform, `constraints { ... because(...) }` work for every dependency. Verified: same resolved dependencies as before |
 | 2026-10-11 | Forced versions: **`constraints` + `because` by default**, `resolutionStrategy.eachDependency` only as an escape hatch | Constraints document the reason (visible in `dependencyInsight`); the escape hatch covers group-wide or conditional rules |
 | 2026-10-11 | **Branching and releases**: `feature/ARQ-n` → PR → `main` → tag `vX.Y.Z`; no `develop` | Merging to `main` certifies (reviewed PR; green pipeline once CI exists), a tag publishes (`release.yml` runs on `v*`). `main` is protected: no direct or force pushes (admins included), linear history, squash merge only, branches deleted on merge. The repo was made public because GitHub Free does not protect private repos. Protection is a repository ruleset (`protect-main`, no bypass actors): classic branch protection with 0 required approvals still let the owner push directly |
+| 2026-10-12 | **Three test suites** (`test`, `intTest`, `archTest`) with the JVM Test Suite plugin, all part of `check`, `test` first (`mustRunAfter`) | Separate source sets and tasks, each runnable alone. New suites do not see the main classes by default in Gradle 9, so they declare `implementation project()` |
+| 2026-10-12 | One **general `ArchitectureTest`** (same source in all templates) for the ARQ-25 layers; layers a project lacks are opted out with `archTest.excludeLayers` in `gradle.properties` (unknown names fail the build) | Every layer rule is tagged `layer-<layer>` (`@ArchTag`), and the opt-out maps to JUnit `excludeTags`. `archRule.failOnEmptyShould=true` so a rule never passes silently on an empty layer. A "no package cycles" rule applies everywhere |
+| 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
 ---
@@ -72,7 +75,7 @@ sample code, tests, comments) translated to English. Sample greetings are now
 | `gradle/libs.versions.toml` | Version catalog (versions, libraries, plugins) |
 | `gradle/repositories.gradle` | Where dependencies come from (private repos go here) |
 | `gradle/java.gradle` | Toolchain, encoding (+ sources/javadoc jars in `java-library`) |
-| `gradle/sources.gradle` | Extra source sets and their tasks (filled in Step 3) |
+| `gradle/sources.gradle` | Extra source sets and their tasks (filled in Step 3: `intTest`, `archTest`) |
 | `gradle/dependencies.gradle` | Project dependencies |
 | `gradle/constraints.gradle` | Forced versions, with commented examples of both mechanisms |
 | `gradle/tests.gradle` | Test task configuration |
@@ -95,3 +98,18 @@ sample code, tests, comments) translated to English. Sample greetings are now
 - Control test with the previous setup (`io.spring.dependency-management` plugin): the same
   constraint asking for 11.0.26 is overridden back to 11.0.24 ("Selected by rule"). This is why
   that setup needs `ext['<lib>.version']` overrides, and why the plugin was dropped.
+
+## 2026-10-12 — Step 3: `intTest` and `archTest` suites
+
+**What:** every template has `test`, `intTest` and `archTest` suites (`src/test`, `src/intTest`,
+`src/archTest`), declared in `gradle/sources.gradle`, wired in `gradle/tests.gradle` and with
+dependencies in `gradle/dependencies.gradle`. `check` runs the three, `test` first. `spring-gradle`
+gets a sample `HelloService` (the controller delegates to it) and a WireMock sample in `intTest`.
+`archTest` enforces the layer convention and forbids package cycles; `gradle.properties` holds
+`archTest.excludeLayers` (`repository,client` in `spring-gradle`; all four layers in `java-app` and
+`java-library`). Main dependencies are unchanged.
+
+**Verification:** `./gradlew clean check` green in the 4 variants (spring-gradle, java-app,
+java-library with and without `--with-publish`); `compileClasspath` and `runtimeClasspath`
+identical to the baseline taken before the change; layer filtering, unknown-layer error, empty-layer
+failure and rule violations (business package, package cycle) checked on generated projects.
