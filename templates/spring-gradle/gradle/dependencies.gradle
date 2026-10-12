@@ -6,4 +6,14 @@ dependencies {
     implementation libs.spring.boot.starter.webmvc
 
     testImplementation libs.spring.boot.starter.webmvc.test
+
+    intTestImplementation platform(libs.spring.boot.bom)
+    intTestImplementation libs.junit.jupiter
+    intTestImplementation libs.wiremock.standalone
+    intTestRuntimeOnly libs.junit.platform.launcher
+
+    archTestImplementation platform(libs.spring.boot.bom)
+    archTestImplementation libs.junit.jupiter
+    archTestImplementation libs.archunit.junit5
+    archTestRuntimeOnly libs.junit.platform.launcher
 }

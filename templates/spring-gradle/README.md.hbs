@@ -21,3 +21,29 @@ The service runs at `http://localhost:{{port}}`.
 ```bash
 ./gradlew build
 ```
+
+## Test suites
+
+| Suite      | Directory      | Run                  | Purpose                                |
+|------------|----------------|----------------------|----------------------------------------|
+| `test`     | `src/test`     | `./gradlew test`     | Unit tests                             |
+| `intTest`  | `src/intTest`  | `./gradlew intTest`  | Integration tests (WireMock available) |
+| `archTest` | `src/archTest` | `./gradlew archTest` | Architecture tests (ArchUnit)          |
+
+`./gradlew check` runs the three suites, `test` first. Each suite can also run alone.
+
+### Architecture tests
+
+`ArchitectureTest` enforces the layered design `controller -> service -> repository | client`
+(naming, no upward calls, no `business` package) and forbids package cycles.
+
+Every layer rule is tagged `layer-<layer>` (`layer-controller`, `layer-service`,
+`layer-repository`, `layer-client`). A layer this artifact does not have is excluded in
+`gradle.properties`:
+
+```properties
+archTest.excludeLayers=repository,client
+```
+
+Remove a layer from the list as soon as the artifact gets it. Unknown layer names fail the
+build. A rule of a layer that is not excluded fails if the layer has no classes.

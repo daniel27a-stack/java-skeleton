@@ -1,0 +1,106 @@
+package {{groupId}};
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
+
+import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.core.importer.Location;
+import com.tngtech.archunit.junit.AnalyzeClasses;
+import com.tngtech.archunit.junit.ArchTag;
+import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchRule;
+
+/**
+ * Architecture rules of the layered design: controller -> service -> repository | client.
+ * Each layer rule is tagged "layer-<layer>"; a layer the artifact does not have is excluded
+ * with archTest.excludeLayers in gradle.properties.
+ */
+@AnalyzeClasses(packages = "{{groupId}}",
+        importOptions = {ImportOption.DoNotIncludeTests.class, ArchitectureTest.ExcludeArchTestClasses.class})
+class ArchitectureTest {
+
+    /** The archTest classes are not part of the application under analysis. */
+    static final class ExcludeArchTestClasses implements ImportOption {
+        @Override
+        public boolean includes(Location location) {
+            return !location.contains("/archTest/");
+        }
+    }
+
+    // ---- controller ----
+
+    // A controller never calls a repository or a client directly.
+    @ArchTest
+    @ArchTag("layer-controller")
+    static final ArchRule controllerDoesNotCallRepositoryOrClient = noClasses()
+            .that().resideInAPackage("..controller..")
+            .should().dependOnClassesThat().resideInAnyPackage("..repository..", "..client..");
+
+    // Classes in the controller package are named *Controller.
+    @ArchTest
+    @ArchTag("layer-controller")
+    static final ArchRule controllerNamesEndWithController = classes()
+            .that().resideInAPackage("..controller..").and().areTopLevelClasses()
+            .should().haveSimpleNameEndingWith("Controller");
+
+    // ---- service ----
+
+    // No layer calls upwards: a service never calls a controller.
+    @ArchTest
+    @ArchTag("layer-service")
+    static final ArchRule serviceDoesNotCallController = noClasses()
+            .that().resideInAPackage("..service..")
+            .should().dependOnClassesThat().resideInAPackage("..controller..");
+
+    // Classes in the service package are named *Service.
+    @ArchTest
+    @ArchTag("layer-service")
+    static final ArchRule serviceNamesEndWithService = classes()
+            .that().resideInAPackage("..service..").and().areTopLevelClasses()
+            .should().haveSimpleNameEndingWith("Service");
+
+    // The package is always "service", never "business".
+    @ArchTest
+    @ArchTag("layer-service")
+    static final ArchRule noBusinessPackage = noClasses()
+            .should().resideInAPackage("..business..");
+
+    // ---- repository ----
+
+    // A repository never calls upwards or a client.
+    @ArchTest
+    @ArchTag("layer-repository")
+    static final ArchRule repositoryDoesNotCallUpwardsOrSiblings = noClasses()
+            .that().resideInAPackage("..repository..")
+            .should().dependOnClassesThat().resideInAnyPackage("..controller..", "..service..", "..client..");
+
+    // Classes in the repository package are named *Repository.
+    @ArchTest
+    @ArchTag("layer-repository")
+    static final ArchRule repositoryNamesEndWithRepository = classes()
+            .that().resideInAPackage("..repository..").and().areTopLevelClasses()
+            .should().haveSimpleNameEndingWith("Repository");
+
+    // ---- client ----
+
+    // A client never calls upwards or a repository.
+    @ArchTest
+    @ArchTag("layer-client")
+    static final ArchRule clientDoesNotCallUpwardsOrSiblings = noClasses()
+            .that().resideInAPackage("..client..")
+            .should().dependOnClassesThat().resideInAnyPackage("..controller..", "..service..", "..repository..");
+
+    // Classes in the client package are named *Client.
+    @ArchTest
+    @ArchTag("layer-client")
+    static final ArchRule clientNamesEndWithClient = classes()
+            .that().resideInAPackage("..client..").and().areTopLevelClasses()
+            .should().haveSimpleNameEndingWith("Client");
+
+    // ---- general ----
+
+    // No package cycles (one slice per package).
+    @ArchTest
+    static final ArchRule noPackageCycles = slices().matching("(**)").should().beFreeOfCycles();
+}

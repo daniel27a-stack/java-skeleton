@@ -1,0 +1,13 @@
+package {{groupId}}.service;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
+
+class HelloServiceTest {
+
+    @Test
+    void greetingNamesTheService() {
+        assertEquals("Hello from {{serviceName}}", new HelloService().greeting());
+    }
+}
