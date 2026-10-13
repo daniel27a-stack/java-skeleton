@@ -118,19 +118,25 @@ failure and rule violations (business package, package cycle) checked on generat
 `spring-gradle` jar answers `GET /hello` as before. `check` runs `test` first even when the
 tasks are requested in reverse order. WireMock is only on the `spring-gradle` `intTest` classpath.
 
-## 2026-10-12 — ARQ-28: CLAUDE.md with the generator context
+## 2026-10-12 — ARQ-28: CONTRIBUTING.md with the generator context
 
-**What:** added a root `CLAUDE.md` (71 lines) so an agent working in this repository knows what it
-is: a Node generator (`bin/cli.js`) that renders Handlebars templates (`.hbs`, `{{packagePath}}`
+**What:** added a root `CONTRIBUTING.md` so anyone changing this repository (person or agent) knows
+what it is: a Node generator (`bin/cli.js`) that renders Handlebars templates (`.hbs`, `{{packagePath}}`
 directory names, `{{#if}}` for optional files such as `publish.gradle` with `--with-publish`). It
 covers how a change is verified (build the Docker image, generate each template, compile each
-generated project with `./gradlew build`) and the scope for agents. It points to `README.md` and
+generated project with `./gradlew build`) and how to make a change. It points to `README.md` and
 `DEVLOG.md` instead of repeating them. Documentation only: no generator, template or build change,
 and `README.md` is unchanged.
 
 **Verification:** `docker build` succeeded; the 4 variants (spring-gradle, java-app, java-library
-with and without `--with-publish`) were generated with the steps written in `CLAUDE.md` and
+with and without `--with-publish`) were generated with the steps written in the document and
 `./gradlew build` was `BUILD SUCCESSFUL` in each (JDK 25.0.4). The generated trees are identical
-(sha256) to the baseline taken before the change. Paths, flags and commands cited in `CLAUDE.md`
+(sha256) to the baseline taken before the change. Paths, flags and commands cited in the document
 were checked against `bin/cli.js`, `templates/manifest.json` and the templates. The diff against
-`origin/main` is only `A CLAUDE.md` (plus this entry).
+`origin/main` is only the new document (plus this entry).
+
+**Changed in review:** the file was first written as `CLAUDE.md` with a "Scope for agents" section.
+It was renamed to `CONTRIBUTING.md` (the standard name, recognized by GitHub, useful to people and
+any agent) and keeps only facts about this repository; agent-specific rules belong to the
+pirca-harness. The review also fixed one rule: `DEVLOG.md` gets an entry in every change, but
+`README.md` changes only when usage, commands or flags change.

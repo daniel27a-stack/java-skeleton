@@ -1,4 +1,7 @@
-# java-skeleton
+# Contributing to java-skeleton
+
+How this repository works and how to change it safely. For using the generator, see
+[`README.md`](README.md).
 
 ## What this repo is
 
@@ -61,11 +64,11 @@ Rules:
   distinct `--artifact` for each so they coexist in `$D`.
 - A template is not considered verified until its generated project builds.
 
-## Scope for agents
+## Making a change
 
-- This is a generator, not a product application.
-- Edit: the templates under `templates/`; generator code (`bin/cli.js`) only when the change is to
-  the generator itself; and `README.md` and `DEVLOG.md`, which are updated in every change
-  following their existing format.
-- Do not touch: generated projects, and `bin/cli.js` unless the change is to the generator.
-- Load the `pirca-conventions` skill before working.
+- Edit the templates under `templates/`. Change the generator code (`bin/cli.js`) only when the
+  change is to the generator itself.
+- Never edit or commit generated projects; they only exist in the temporary directory used for
+  verification.
+- Add an entry to `DEVLOG.md` for every change, following its format (what, why, verification).
+- Update `README.md` only when usage, commands or flags change.
