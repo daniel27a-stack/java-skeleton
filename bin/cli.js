@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { select, input, confirm } from '@inquirer/prompts';
+import { select, input } from '@inquirer/prompts';
 import Handlebars from 'handlebars';
 import fs from 'fs-extra';
 import path from 'path';
@@ -14,23 +14,23 @@ const pkg = fs.readJsonSync(path.join(ROOT, 'package.json'));
 const manifest = fs.readJsonSync(path.join(TEMPLATES_DIR, 'manifest.json'));
 
 const JAVA_VERSIONS = ['17', '21', '25'];
-const GROUP_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
-const ARTIFACT_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+const TYPE_IDS = manifest.types.map((t) => t.id);
+const PRODUCT_RE = /^[a-z][a-z0-9]*$/;
+const SERVICE_NAME_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+const LIB_NAME_RE = /^[a-z][a-z0-9]*$/;
 
 const program = new Command();
 program
   .name('java-skeleton')
-  .description('Generates a Java + Gradle project skeleton (Spring Boot REST service, app/CLI or library)')
+  .description(`pirca generator: creates a project by artifact type (${TYPE_IDS.join(', ')})`)
   .version(pkg.version)
-  .option('-t, --template <id>', `template to use (${manifest.templates.map((t) => t.id).join(', ')})`)
-  .option('-n, --name <name>', 'project/service name')
-  .option('-g, --group <groupId>', 'group id, e.g. com.example')
-  .option('-a, --artifact <artifactId>', 'artifact id (output folder)')
-  .option('-j, --java <version>', `Java version (${JAVA_VERSIONS.join(' | ')})`)
-  .option('-p, --port <port>', 'service port (spring-gradle only)')
-  .option('--with-publish', 'include maven-publish setup (java-library only)')
+  .option('-t, --type <type>', `artifact type (${TYPE_IDS.join(', ')})`)
+  .option('--product <product>', 'product, e.g. gastos (services only)')
+  .option('-n, --name <name>', 'artifact name, e.g. expense')
+  .option('-j, --java <version>', `Java version (${JAVA_VERSIONS.join(' | ')}), default 25`)
+  .option('-p, --port <port>', 'service port (services only), default 8080')
   .option('-d, --dir <path>', 'base directory where the project is created', process.cwd())
-  .option('-y, --yes', 'do not prompt; use defaults for anything missing')
+  .option('-y, --yes', 'do not prompt; --type, --name and --product (services) are required')
   .parse();
 
 const opts = program.opts();
@@ -45,16 +45,23 @@ if (!process.stdin.isTTY && !opts.yes) {
   fail(
     'no interactive terminal.\n' +
       '  - For interactive mode: add -it to docker run.\n' +
-      '  - For unattended mode: pass --yes along with the flags (--template, --name, --group, --artifact, --java).',
+      '  - For unattended mode: pass --yes along with the flags (--type, --name, and --product for services).',
   );
 }
 
-function validateGroup(v) {
-  return GROUP_RE.test(v) || 'invalid format (e.g. com.example.project)';
+function validateType(v) {
+  return TYPE_IDS.includes(v) || `unknown type "${v}". Options: ${TYPE_IDS.join(', ')}`;
 }
 
-function validateArtifact(v) {
-  return ARTIFACT_RE.test(v) || 'lowercase letters, digits and hyphens only, e.g. my-service';
+function validateProduct(v) {
+  return PRODUCT_RE.test(v) || 'lowercase letters and digits only, starting with a letter (no hyphens), e.g. gastos';
+}
+
+function validateName(kind) {
+  return (v) =>
+    kind === 'lib'
+      ? LIB_NAME_RE.test(v) || 'lib name: lowercase letters and digits only, starting with a letter (no hyphens), e.g. errors'
+      : SERVICE_NAME_RE.test(v) || 'lowercase letters, digits and single hyphens, starting with a letter, e.g. expense-claims';
 }
 
 function validateJava(v) {
@@ -73,20 +80,17 @@ function toPascalCase(str) {
     .join('');
 }
 
-async function resolveTemplate() {
-  if (opts.template) {
-    const t = manifest.templates.find((x) => x.id === opts.template);
-    if (!t) {
-      fail(`unknown template: ${opts.template}. Options: ${manifest.templates.map((x) => x.id).join(', ')}`);
-    }
-    return t;
+async function resolveType() {
+  let id = opts.type;
+  if (id != null) {
+    const res = validateType(id);
+    if (res !== true) fail(`--type: ${res}`);
+  } else if (opts.yes) {
+    fail(`missing --type (${TYPE_IDS.join(', ')})`);
+  } else {
+    id = await select({ message: 'Artifact type:', choices: TYPE_IDS.map((t) => ({ name: t, value: t })) });
   }
-  if (opts.yes) return manifest.templates[0];
-  const id = await select({
-    message: 'Project type:',
-    choices: manifest.templates.map((t) => ({ name: t.label, value: t.id })),
-  });
-  return manifest.templates.find((t) => t.id === id);
+  return manifest.types.find((t) => t.id === id);
 }
 
 // Returns a flag's value (validated) or prompts for it; with --yes uses the default.
@@ -100,8 +104,11 @@ async function ask(flag, message, def, validate) {
     }
     return value;
   }
-  if (opts.yes) return def;
-  return input({ message, default: def, validate });
+  if (opts.yes) {
+    if (def === undefined) fail(`missing --${flag}`);
+    return def;
+  }
+  return input({ message, ...(def !== undefined && { default: def }), validate });
 }
 
 async function renderDir(srcDir, destDir, context) {
@@ -136,41 +143,48 @@ function renderName(segment, context) {
   return base.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? '');
 }
 
+function derive(type, product, name) {
+  if (type.kind === 'lib') {
+    return { artifactId: `lib-${name}`, groupId: `cl.pirca.lib.${name}`, repoName: `lib-${name}` };
+  }
+  return { artifactId: `${type.id}-${name}`, groupId: `cl.pirca.${product}`, repoName: `${product}-${type.id}-${name}` };
+}
+
 async function main() {
-  const template = await resolveTemplate();
+  const type = await resolveType();
 
-  const serviceName = await ask('name', 'Project name:', 'my-service');
-  const groupId = await ask('group', 'Group ID:', 'com.example', validateGroup);
-  const artifactId = await ask('artifact', 'Artifact ID:', serviceName, validateArtifact);
-  const javaVersion = await ask('java', `Java version (${JAVA_VERSIONS.join('/')}):`, '25', validateJava);
-
-  let port = '8080';
-  if (template.prompts.includes('port')) {
-    port = await ask('port', 'Service port:', '8080', validatePort);
+  let product;
+  if (type.kind === 'lib') {
+    if (opts.product != null) fail('--product is not accepted for lib');
+  } else {
+    product = await ask('product', 'Product (e.g. gastos):', undefined, validateProduct);
   }
+  const name = await ask('name', 'Name (e.g. expense):', undefined, validateName(type.kind));
+  // Java and port are never prompted: flags or defaults.
+  const javaVersion = opts.java != null ? String(opts.java) : '25';
+  const javaCheck = validateJava(javaVersion);
+  if (javaCheck !== true) fail(`--java: ${javaCheck}`);
+  const port = opts.port != null ? String(opts.port) : '8080';
+  const portCheck = validatePort(port);
+  if (portCheck !== true) fail(`--port: ${portCheck}`);
 
-  let withPublish = false;
-  if (template.prompts.includes('withPublish')) {
-    if (opts.withPublish) withPublish = true;
-    else if (!opts.yes) withPublish = await confirm({ message: 'Include maven-publish?', default: false });
-  }
+  const { artifactId, groupId, repoName } = derive(type, product, name);
 
   const context = {
-    serviceName,
+    serviceName: repoName,
     groupId,
     artifactId,
     javaVersion,
     port,
-    withPublish,
     packagePath: groupId.replace(/\./g, '/'),
     className: toPascalCase(artifactId),
   };
 
-  const templateDir = path.join(TEMPLATES_DIR, template.id);
-  const targetDir = path.join(path.resolve(opts.dir || process.cwd()), artifactId);
+  const templateDir = path.join(TEMPLATES_DIR, type.template);
+  const targetDir = path.join(path.resolve(opts.dir || process.cwd()), repoName);
 
   if (await fs.pathExists(targetDir)) {
-    fail(`"${targetDir}" already exists; choose another artifact id or delete that folder.`);
+    fail(`"${targetDir}" already exists; choose another name or delete that folder.`);
   }
 
   await renderDir(templateDir, targetDir, context);
@@ -178,8 +192,10 @@ async function main() {
   const gradlew = path.join(targetDir, 'gradlew');
   if (await fs.pathExists(gradlew)) await fs.chmod(gradlew, 0o755);
 
-  const rel = path.relative(process.cwd(), targetDir) || artifactId;
-  console.log(`\n✔ Project "${artifactId}" (${template.id}) created in ${targetDir}\n`);
+  const rel = path.relative(process.cwd(), targetDir) || repoName;
+  console.log(`\n✔ ${type.id} "${repoName}" created in ${targetDir}`);
+  console.log(`  artifact ID: ${artifactId}`);
+  console.log(`  group ID / package: ${groupId}\n`);
   console.log(`  cd ${rel}`);
   console.log(`  ./gradlew build\n`);
 }

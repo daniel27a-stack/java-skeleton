@@ -2,7 +2,7 @@
 
 Log of the steps taken on the generator, in order. Each entry states **what** changed,
 **why**, and **how it was verified**. Architecture decisions for pirca (BC/MC/ACL/lib,
-`cl.pirca` naming) are recorded elsewhere; this file covers the templates only.
+`cl.pirca` naming) are recorded elsewhere; this file covers the generator and its templates.
 
 ## Template plan (defined 2026-10-10)
 
@@ -29,6 +29,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-12 | One **general `ArchitectureTest`** (same source in all templates) for the ARQ-25 layers; layers a project lacks are opted out with `archTest.excludeLayers` in `gradle.properties` (unknown names fail the build) | Every layer rule is tagged `layer-<layer>` (`@ArchTag`), and the opt-out maps to JUnit `excludeTags`. `archRule.failOnEmptyShould=true` so a rule never passes silently on an empty layer. A "no package cycles" rule applies everywhere |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
+| 2026-10-14 | **Generator by artifact type**: inputs are type (`edge`, `flow`, `data`, `acl`, `lib`), product (services only) and name; Artifact ID, Group ID, package and folder are derived; libs always include publishing; `java-app` is not offered | java-skeleton is the pirca generator (ARQ-34 types). Package = Group ID with no per-artifact sub-package; each lib has its own group. `java-app` stays on disk unused |
 
 ---
 
@@ -140,3 +141,17 @@ It was renamed to `CONTRIBUTING.md` (the standard name, recognized by GitHub, us
 any agent) and keeps only facts about this repository; agent-specific rules belong to the
 pirca-harness. The review also fixed one rule: `DEVLOG.md` gets an entry in every change, but
 `README.md` changes only when usage, commands or flags change.
+
+## 2026-10-14 — ARQ-32: pirca generator by artifact type
+
+**What:**
+- `bin/cli.js`: inputs are now `--type`, `--product` and `--name` (interactive: type, product if not `lib`, name). `--template`, `--group`, `--artifact` and `--with-publish` are removed; Java and port stay optional flags with defaults.
+- Derived values: services get Artifact ID `<type>-<name>`, group/package `cl.pirca.<product>` and folder `<product>-<type>-<name>`; libs get `lib-<name>`, `cl.pirca.lib.<name>` and folder `lib-<name>`. `serviceName` is the repository name.
+- `templates/manifest.json`: `types` map each type to a template; `java-app` is no longer listed (directory kept on disk).
+- `java-library`: publishing is unconditional (no `withPublish`).
+- `constraints.gradle` comment example `com.example.group` replaced by `org.apache.commons` in `spring-gradle` and `java-library`.
+- `README.md` and `CONTRIBUTING.md` updated.
+
+**Why:** the generator becomes the pirca generator and asks only what cannot be deduced (ARQ-32).
+
+**Verification:** image rebuilt; `data`/`flow`/`edge`/`acl`/`lib` generated; invalid input and removed flags exit 1 and create nothing; generated `gastos-data-expense` and `lib-errors` differ from the old-CLI baseline only in the `constraints.gradle` comment; `./gradlew build` passes in `gastos-data-expense`, `gastos-flow-expense-claims` and `lib-errors`; `publishToMavenLocal` works in the lib.

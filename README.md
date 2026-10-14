@@ -1,12 +1,13 @@
 # java-skeleton
 
-Project skeleton generator for **Java + Gradle**. Three templates:
+**pirca generator** for Java + Gradle projects. It asks only for the artifact **type**, the
+**product** (services only) and the **name**; Artifact ID, Group ID, Java package and output
+folder are derived (see [pirca conventions](#derived-names)).
 
-| Template        | Gradle plugin                | Purpose                          |
-|-----------------|------------------------------|----------------------------------|
-| `spring-gradle` | `org.springframework.boot`   | Spring Boot REST service         |
-| `java-app`      | `application`                | Executable app / CLI tool        |
-| `java-library`  | `java-library`               | Reusable library                 |
+| Type                           | Template        | Gradle plugin              | Purpose                  |
+|--------------------------------|-----------------|----------------------------|--------------------------|
+| `edge`, `flow`, `data`, `acl`  | `spring-gradle` | `org.springframework.boot` | Spring Boot REST service |
+| `lib`                          | `java-library`  | `java-library`             | Reusable library (always with `maven-publish`) |
 
 The generated project ships with the **Gradle wrapper embedded**, so it builds with
 `./gradlew build` without Gradle installed (only a JDK is needed).
@@ -31,7 +32,15 @@ Non-interactive mode:
 ```bash
 docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
   ghcr.io/daniel27a-stack/java-skeleton \
-  --yes --template java-library --name my-lib --group com.acme --artifact my-lib --java 25 --with-publish
+  --yes --type data --product gastos --name expense
+```
+
+A library takes no product:
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+  ghcr.io/daniel27a-stack/java-skeleton \
+  --yes --type lib --name errors
 ```
 
 ### Short alias
@@ -39,7 +48,7 @@ docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
 Copy `scripts/java-skeleton` to `~/.local/bin/` and then:
 
 ```bash
-java-skeleton --template spring-gradle
+java-skeleton --type flow --product gastos --name expense-claims
 ```
 
 ---
@@ -56,23 +65,36 @@ npx java-skeleton
 
 ## Flags
 
-| Flag                     | Description                                       |
-|--------------------------|---------------------------------------------------|
-| `-t, --template <id>`    | `spring-gradle` \| `java-app` \| `java-library`   |
-| `-n, --name <name>`      | Project name                                      |
-| `-g, --group <groupId>`  | Group id, e.g. `com.example`                      |
-| `-a, --artifact <id>`    | Artifact id (name of the output folder)           |
-| `-j, --java <version>`   | `17` \| `21` \| `25` (default `25`)               |
-| `-p, --port <port>`      | Port (`spring-gradle` only)                       |
-| `--with-publish`         | Include `maven-publish` (`java-library` only)     |
-| `-d, --dir <path>`       | Base directory where the project is created       |
-| `-y, --yes`              | Do not prompt; use defaults for anything missing  |
+| Flag                   | Description                                                        |
+|------------------------|--------------------------------------------------------------------|
+| `-t, --type <type>`    | `edge` \| `flow` \| `data` \| `acl` \| `lib`                        |
+| `--product <product>`  | Product, e.g. `gastos` (services only; rejected for `lib`; no short flag) |
+| `-n, --name <name>`    | Artifact name, e.g. `expense`                                      |
+| `-j, --java <version>` | `17` \| `21` \| `25` (default `25`, never prompted)                |
+| `-p, --port <port>`    | Port (services only; default `8080`, never prompted)              |
+| `-d, --dir <path>`     | Base directory where the project is created                        |
+| `-y, --yes`            | Do not prompt; `--type`, `--name` and `--product` (services) are required |
+
+Formats: product `^[a-z][a-z0-9]*$` (no hyphens); service name `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`
+(hyphens allowed); lib name `^[a-z][a-z0-9]*$` (no hyphens). Invalid or missing input fails
+with a message and creates nothing.
+
+### Derived names
+
+| Value               | Services (`edge`, `flow`, `data`, `acl`) | `lib`                  |
+|---------------------|------------------------------------------|------------------------|
+| Artifact ID         | `<type>-<name>` (`data-expense`)         | `lib-<name>`           |
+| Group ID = package  | `cl.pirca.<product>`                     | `cl.pirca.lib.<name>`  |
+| Output folder       | `<product>-<type>-<name>` (`gastos-data-expense`) | `lib-<name>`  |
+
+The Gradle project name is the Artifact ID, not the folder name.
+
 
 ---
 
 ## Generated project: test suites
 
-Every template generates three test suites, all run by `./gradlew check` (`test` first) and
+Every generated project has three test suites, all run by `./gradlew check` (`test` first) and
 each runnable alone:
 
 | Suite      | Directory      | Command              |
@@ -102,8 +124,8 @@ docker build -t java-skeleton:dev .
 # Try it
 D=$(mktemp -d)
 docker run --rm -u "$(id -u):$(id -g)" -v "$D:/work" java-skeleton:dev \
-  --yes --template spring-gradle --name demo --group com.acme --artifact demo --java 25
-cd "$D/demo" && ./gradlew build
+  --yes --type data --product gastos --name expense
+cd "$D/gastos-data-expense" && ./gradlew build
 ```
 
 Publishing (image to GHCR + package to npm) runs through `.github/workflows/release.yml`

@@ -36,7 +36,6 @@ build. A rule of a layer that is not excluded fails if the layer has no classes.
 
 ## Publish
 
-{{#if withPublish}}
 Local publishing (to consume it from another project on the same machine):
 
 ```bash
@@ -45,7 +44,3 @@ Local publishing (to consume it from another project on the same machine):
 
 Uncomment the `repositories` block in `gradle/publish.gradle` to publish to GitHub Packages
 or another Maven repository.
-{{else}}
-This project does not include `maven-publish`. Regenerate it with `--with-publish` or add
-the plugin manually in `build.gradle`.
-{{/if}}

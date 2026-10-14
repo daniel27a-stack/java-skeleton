@@ -1,19 +1,13 @@
 {
+  "types": [
+    { "id": "edge", "template": "spring-gradle", "kind": "service" },
+    { "id": "flow", "template": "spring-gradle", "kind": "service" },
+    { "id": "data", "template": "spring-gradle", "kind": "service" },
+    { "id": "acl",  "template": "spring-gradle", "kind": "service" },
+    { "id": "lib",  "template": "java-library",  "kind": "lib" }
+  ],
   "templates": [
-    {
-      "id": "spring-gradle",
-      "label": "REST service — Spring Boot + Gradle",
-      "prompts": ["port"]
-    },
-    {
-      "id": "java-app",
-      "label": "Executable Java app / CLI + Gradle",
-      "prompts": []
-    },
-    {
-      "id": "java-library",
-      "label": "Reusable Java library + Gradle",
-      "prompts": ["withPublish"]
-    }
+    { "id": "spring-gradle", "label": "REST service — Spring Boot + Gradle" },
+    { "id": "java-library",  "label": "Reusable Java library + Gradle" }
   ]
 }
