@@ -1,7 +1,7 @@
 {
   "name": "java-skeleton",
   "version": "0.1.0",
-  "description": "Generates Java + Gradle project skeletons (Spring Boot REST service, app/CLI or library)",
+  "description": "Generates pirca projects: REST services (edge, flow, data, acl) and libraries",
   "type": "module",
   "bin": {
     "java-skeleton": "./bin/cli.js"

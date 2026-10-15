@@ -1,12 +1,10 @@
 plugins {
     id 'java-library'
-{{#if withPublish}}
     id 'maven-publish'
-{{/if}}
 }
 
 group = '{{groupId}}'
-version = '0.1.0'
+version = '1.0.0'
 
 apply from: 'gradle/repositories.gradle'
 apply from: 'gradle/java.gradle'
@@ -14,6 +12,4 @@ apply from: 'gradle/sources.gradle'
 apply from: 'gradle/dependencies.gradle'
 apply from: 'gradle/constraints.gradle'
 apply from: 'gradle/tests.gradle'
-{{#if withPublish}}
 apply from: 'gradle/publish.gradle'
-{{/if}}

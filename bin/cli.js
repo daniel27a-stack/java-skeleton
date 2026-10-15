@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { select, input, confirm } from '@inquirer/prompts';
+import { select, input } from '@inquirer/prompts';
 import Handlebars from 'handlebars';
 import fs from 'fs-extra';
 import path from 'path';
@@ -13,24 +13,26 @@ const TEMPLATES_DIR = path.join(ROOT, 'templates');
 const pkg = fs.readJsonSync(path.join(ROOT, 'package.json'));
 const manifest = fs.readJsonSync(path.join(TEMPLATES_DIR, 'manifest.json'));
 
-const JAVA_VERSIONS = ['17', '21', '25'];
-const GROUP_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
-const ARTIFACT_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+// Single place for the Java version used by every generated project.
+const JAVA_VERSION = '25';
+
+const PRODUCT_RE = /^[a-z][a-z0-9]*$/;
+const SERVICE_NAME_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+const LIB_NAME_RE = /^[a-z][a-z0-9]*$/;
+
+const TYPE_IDS = manifest.types.map((t) => t.id);
 
 const program = new Command();
 program
   .name('java-skeleton')
-  .description('Generates a Java + Gradle project skeleton (Spring Boot REST service, app/CLI or library)')
-  .version(pkg.version)
-  .option('-t, --template <id>', `template to use (${manifest.templates.map((t) => t.id).join(', ')})`)
-  .option('-n, --name <name>', 'project/service name')
-  .option('-g, --group <groupId>', 'group id, e.g. com.example')
-  .option('-a, --artifact <artifactId>', 'artifact id (output folder)')
-  .option('-j, --java <version>', `Java version (${JAVA_VERSIONS.join(' | ')})`)
-  .option('-p, --port <port>', 'service port (spring-gradle only)')
-  .option('--with-publish', 'include maven-publish setup (java-library only)')
-  .option('-d, --dir <path>', 'base directory where the project is created', process.cwd())
-  .option('-y, --yes', 'do not prompt; use defaults for anything missing')
+  .description('Generates pirca projects: REST services (edge, flow, data, acl) and libraries')
+  .version(pkg.version, '--version', 'print the version')
+  .helpOption('--help', 'show this help')
+  .allowExcessArguments(false)
+  .option('--yes', 'do not prompt; requires --type and --name (and --product for services)')
+  .option('--type <type>', `artifact type (${TYPE_IDS.join(', ')})`)
+  .option('--name <name>', 'artifact name')
+  .option('--product <product>', 'product name (services only, not for lib)')
   .parse();
 
 const opts = program.opts();
@@ -40,68 +42,62 @@ function fail(msg) {
   process.exit(1);
 }
 
-// Without an interactive terminal we cannot prompt: require --yes (or flags + --yes).
+function validateProduct(v) {
+  return PRODUCT_RE.test(v) || 'lowercase letters and digits, starting with a letter, e.g. gastos';
+}
+
+function validateName(type) {
+  if (type === 'lib') {
+    return (v) => LIB_NAME_RE.test(v) || 'lowercase letters and digits, starting with a letter, e.g. errors';
+  }
+  return (v) =>
+    SERVICE_NAME_RE.test(v) ||
+    'lowercase letters, digits and single hyphens, starting with a letter, e.g. expense-claims';
+}
+
+// Checks that run before anything is asked or written.
+const flagsGiven = opts.type !== undefined || opts.name !== undefined || opts.product !== undefined;
+if (flagsGiven && !opts.yes) {
+  fail('--type, --name and --product can only be used together with --yes.');
+}
 if (!process.stdin.isTTY && !opts.yes) {
   fail(
     'no interactive terminal.\n' +
       '  - For interactive mode: add -it to docker run.\n' +
-      '  - For unattended mode: pass --yes along with the flags (--template, --name, --group, --artifact, --java).',
+      '  - For unattended mode: pass --yes --type <type> --name <name> [--product <product>].',
   );
 }
 
-function validateGroup(v) {
-  return GROUP_RE.test(v) || 'invalid format (e.g. com.example.project)';
-}
-
-function validateArtifact(v) {
-  return ARTIFACT_RE.test(v) || 'lowercase letters, digits and hyphens only, e.g. my-service';
-}
-
-function validateJava(v) {
-  return JAVA_VERSIONS.includes(v) || `choose one of: ${JAVA_VERSIONS.join(', ')}`;
-}
-
-function validatePort(v) {
-  return /^\d{2,5}$/.test(v) || 'invalid port';
-}
-
-function toPascalCase(str) {
-  return str
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join('');
-}
-
-async function resolveTemplate() {
-  if (opts.template) {
-    const t = manifest.templates.find((x) => x.id === opts.template);
-    if (!t) {
-      fail(`unknown template: ${opts.template}. Options: ${manifest.templates.map((x) => x.id).join(', ')}`);
-    }
-    return t;
+// Non-interactive mode: validates the flags and returns { type, product, name }.
+function fromFlags() {
+  const { type, product, name } = opts;
+  if (type === undefined || type === '') fail(`--type is required. Options: ${TYPE_IDS.join(', ')}`);
+  if (!TYPE_IDS.includes(type)) fail(`unknown type: ${type}. Options: ${TYPE_IDS.join(', ')}`);
+  if (type === 'lib') {
+    if (product !== undefined) fail('--product is not allowed with --type lib.');
+  } else {
+    if (product === undefined) fail(`--product is required for --type ${type}.`);
+    const res = validateProduct(product);
+    if (res !== true) fail(`--product: ${res}`);
   }
-  if (opts.yes) return manifest.templates[0];
-  const id = await select({
-    message: 'Project type:',
-    choices: manifest.templates.map((t) => ({ name: t.label, value: t.id })),
+  if (name === undefined || name === '') fail('--name is required.');
+  const res = validateName(type)(name);
+  if (res !== true) fail(`--name: ${res}`);
+  return { type, product, name };
+}
+
+// Interactive mode: asks type, then product (services only), then name; invalid values are re-asked.
+async function fromPrompts() {
+  const type = await select({
+    message: 'Type:',
+    choices: manifest.types.map((t) => ({ name: t.label, value: t.id })),
   });
-  return manifest.templates.find((t) => t.id === id);
-}
-
-// Returns a flag's value (validated) or prompts for it; with --yes uses the default.
-async function ask(flag, message, def, validate) {
-  const provided = opts[flag];
-  if (provided != null) {
-    const value = String(provided);
-    if (validate) {
-      const res = validate(value);
-      if (res !== true) fail(`--${flag}: ${res}`);
-    }
-    return value;
+  let product;
+  if (type !== 'lib') {
+    product = await input({ message: 'Product:', validate: validateProduct });
   }
-  if (opts.yes) return def;
-  return input({ message, default: def, validate });
+  const name = await input({ message: 'Name:', validate: validateName(type) });
+  return { type, product, name };
 }
 
 async function renderDir(srcDir, destDir, context) {
@@ -120,7 +116,7 @@ async function renderDir(srcDir, destDir, context) {
     if (entry.name.endsWith('.hbs')) {
       const raw = await fs.readFile(srcPath, 'utf-8');
       const rendered = Handlebars.compile(raw, { noEscape: true })(context);
-      // A template that renders to nothing (e.g. wrapped in {{#if flag}}) is optional: skip it.
+      // A template that renders to nothing (e.g. wrapped in a false {{#if}}) is optional: skip it.
       if (rendered.trim() === '') continue;
       await fs.writeFile(destPath, rendered);
     } else {
@@ -137,51 +133,33 @@ function renderName(segment, context) {
 }
 
 async function main() {
-  const template = await resolveTemplate();
+  const { type, product, name } = opts.yes ? fromFlags() : await fromPrompts();
+  const template = manifest.types.find((t) => t.id === type).template;
 
-  const serviceName = await ask('name', 'Project name:', 'my-service');
-  const groupId = await ask('group', 'Group ID:', 'com.example', validateGroup);
-  const artifactId = await ask('artifact', 'Artifact ID:', serviceName, validateArtifact);
-  const javaVersion = await ask('java', `Java version (${JAVA_VERSIONS.join('/')}):`, '25', validateJava);
-
-  let port = '8080';
-  if (template.prompts.includes('port')) {
-    port = await ask('port', 'Service port:', '8080', validatePort);
-  }
-
-  let withPublish = false;
-  if (template.prompts.includes('withPublish')) {
-    if (opts.withPublish) withPublish = true;
-    else if (!opts.yes) withPublish = await confirm({ message: 'Include maven-publish?', default: false });
-  }
+  const isLib = type === 'lib';
+  const serviceName = isLib ? `lib-${name}` : `${product}-${type}-${name}`;
+  const artifactId = isLib ? `lib-${name}` : `${type}-${name}`;
+  const groupId = isLib ? `cl.pirca.lib.${name}` : `cl.pirca.${product}`;
 
   const context = {
     serviceName,
     groupId,
     artifactId,
-    javaVersion,
-    port,
-    withPublish,
+    javaVersion: JAVA_VERSION,
     packagePath: groupId.replace(/\./g, '/'),
-    className: toPascalCase(artifactId),
   };
 
-  const templateDir = path.join(TEMPLATES_DIR, template.id);
-  const targetDir = path.join(path.resolve(opts.dir || process.cwd()), artifactId);
+  const templateDir = path.join(TEMPLATES_DIR, template);
+  const targetDir = path.join(process.cwd(), serviceName);
 
   if (await fs.pathExists(targetDir)) {
-    fail(`"${targetDir}" already exists; choose another artifact id or delete that folder.`);
+    fail(`"${targetDir}" already exists; choose another name or delete that folder.`);
   }
 
   await renderDir(templateDir, targetDir, context);
 
   const gradlew = path.join(targetDir, 'gradlew');
   if (await fs.pathExists(gradlew)) await fs.chmod(gradlew, 0o755);
-
-  const rel = path.relative(process.cwd(), targetDir) || artifactId;
-  console.log(`\n✔ Project "${artifactId}" (${template.id}) created in ${targetDir}\n`);
-  console.log(`  cd ${rel}`);
-  console.log(`  ./gradlew build\n`);
 }
 
 main().catch((err) => {

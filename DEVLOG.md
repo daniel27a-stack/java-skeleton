@@ -140,3 +140,32 @@ It was renamed to `CONTRIBUTING.md` (the standard name, recognized by GitHub, us
 any agent) and keeps only facts about this repository; agent-specific rules belong to the
 pirca-harness. The review also fixed one rule: `DEVLOG.md` gets an entry in every change, but
 `README.md` changes only when usage, commands or flags change.
+
+## 2026-10-15 — ARQ-32: pirca generator (type, product, name)
+
+**What:** java-skeleton is now the pirca generator. It asks only for the type (`edge`, `flow`,
+`data`, `acl`, `lib`), the product (services only) and the name, interactively or with
+`--yes --type <t> --name <n> [--product <p>]`; besides those only `--help` and `--version` exist.
+Folder, artifactId, groupId, package and serviceName are derived (`gastos`/`data`/`expense` gives
+`gastos-data-expense`, `data-expense`, `cl.pirca.gastos`; `lib`/`errors` gives `lib-errors`,
+`cl.pirca.lib.errors`). Removed: the flags `--template --group --artifact --java --port --dir
+--with-publish` and the shortcuts, the questions that went with them, the success message, port
+configuration (`server.port`, `localhost:<port>`), the `java-app` template, and the
+`className`, `port` and `withPublish` template variables. The Java version is the `JAVA_VERSION`
+constant in `bin/cli.js`. Services get `Application.java`, libs get `Example`, `ExampleTest` and
+`ExampleIntTest`, every project starts at `1.0.0`, and libs always include `maven-publish`.
+`manifest.json` maps the five types to their template; `package.json` description, `README.md` and
+`CONTRIBUTING.md` were updated.
+
+**Why:** the generator should ask for the three data that define a pirca artifact and nothing
+else, so every artifact follows the same names and structure.
+
+**Verification:** image rebuilt; `--yes` generation of `data`, `edge` and `lib` builds with
+`./gradlew build` (service and lib also `check`) using JDK 25; `publishToMavenLocal` publishes
+`lib-errors` 1.0.0; resolved `compileClasspath`, `runtimeClasspath`, `testRuntimeClasspath`,
+`intTestRuntimeClasspath` and `archTestRuntimeClasspath` are identical to the baseline taken
+before the change; invalid flags and values fail with exit 1 and no files; interactive mode
+re-asks invalid values and Ctrl-C exits with 130 and no files.
+
+**Unchanged:** dependencies and versions, `archTest.excludeLayers`, the Gradle wrapper, the
+Dockerfile, `scripts/java-skeleton`, the release workflow and the `spring-gradle` example classes.
