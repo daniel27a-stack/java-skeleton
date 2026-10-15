@@ -1,5 +1,0 @@
-// Where dependencies are downloaded from.
-// Private repositories (e.g. GitHub Packages for lib-*) are added here.
-repositories {
-    mavenCentral()
-}

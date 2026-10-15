@@ -1,19 +1,9 @@
 {
-  "templates": [
-    {
-      "id": "spring-gradle",
-      "label": "REST service — Spring Boot + Gradle",
-      "prompts": ["port"]
-    },
-    {
-      "id": "java-app",
-      "label": "Executable Java app / CLI + Gradle",
-      "prompts": []
-    },
-    {
-      "id": "java-library",
-      "label": "Reusable Java library + Gradle",
-      "prompts": ["withPublish"]
-    }
+  "types": [
+    { "id": "edge", "label": "edge - entry point for one channel (Spring Boot service)", "template": "spring-gradle" },
+    { "id": "flow", "label": "flow - orchestrates a business process (Spring Boot service)", "template": "spring-gradle" },
+    { "id": "data", "label": "data - owns its data (Spring Boot service)", "template": "spring-gradle" },
+    { "id": "acl", "label": "acl - anti-corruption layer (Spring Boot service)", "template": "spring-gradle" },
+    { "id": "lib", "label": "lib - transversal technical library", "template": "java-library" }
   ]
 }

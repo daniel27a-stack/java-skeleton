@@ -6,8 +6,9 @@ How this repository works and how to change it safely. For using the generator, 
 ## What this repo is
 
 java-skeleton is a **project generator**, not a product application. It is implemented in Node;
-the entry point is `bin/cli.js`. It produces projects from the templates in `templates/`:
-`spring-gradle`, `java-app` and `java-library` (registered in `templates/manifest.json`).
+the entry point is `bin/cli.js`. It produces projects from the templates in `templates/`: `spring-gradle` (types `edge`, `flow`,
+`data` and `acl`) and `java-library` (type `lib`). The mapping from type to template is in
+`templates/manifest.json`.
 
 - Usage and flags: see [`README.md`](README.md).
 - Log of changes and decisions: see [`DEVLOG.md`](DEVLOG.md).
@@ -20,19 +21,17 @@ Templates are rendered with Handlebars by `bin/cli.js`.
 - **`{{packagePath}}` in directory names**: for example
   `templates/spring-gradle/src/main/java/{{packagePath}}/`. It is resolved to the package path
   (the `groupId` with `.` replaced by `/`).
-- **Optional files and blocks** are controlled with `{{#if}}`.
-- **An `.hbs` file that renders empty is not written.** This is how optional files with `{{#if}}` work.
-  Example: `templates/java-library/gradle/publish.gradle.hbs` renders empty and is NOT written when
-  the project is generated WITHOUT `--with-publish`; with `--with-publish` it is written.
+- **An `.hbs` file that renders empty is not written.** This lets a file be optional by wrapping it
+  in `{{#if}}`. No current template relies on it.
 - **Files without `.hbs` are copied verbatim** (for example `gradlew` and `gradle-wrapper.jar`).
-- **Variables available to templates**: `groupId`, `artifactId`, `serviceName`, `javaVersion`, `port`,
-  `withPublish`, `className` and `packagePath`. `{{className}}` is also used in file names
-  (for example `{{className}}Application.java.hbs`).
+- **Variables available to templates**: `groupId`, `artifactId`, `serviceName`, `javaVersion` and
+  `packagePath`. They are derived from the type, product and name (see `README.md`). The Java version
+  is not an input: it is the `JAVA_VERSION` constant in `bin/cli.js`, the only place to change it.
 
 ## How to verify a change
 
 Run these steps in order. Only a JDK is needed on the host (the Gradle wrapper is embedded in the
-generated project; use JDK 25 for `--java 25`).
+generated project; use JDK 25, the value of `JAVA_VERSION`).
 
 1. Build the Docker image:
    ```bash
@@ -42,15 +41,17 @@ generated project; use JDK 25 for `--java 25`).
    ```bash
    D=$(mktemp -d)
    ```
-3. Generate a project from each affected template with the image (non-interactive `--yes` mode):
+3. Generate a project from each affected variant with the image (non-interactive `--yes` mode):
    ```bash
    docker run --rm -u "$(id -u):$(id -g)" -v "$D:/work" java-skeleton:dev \
-     --yes --template spring-gradle --name demo --group com.acme --artifact demo-spring --java 25
+     --yes --type data --product gastos --name expense
+   docker run --rm -u "$(id -u):$(id -g)" -v "$D:/work" java-skeleton:dev \
+     --yes --type lib --name errors
    ```
-   Change `--template` and `--artifact` for the other variants (see below).
-4. Compile and verify the generated project:
+4. Compile and verify each generated project:
    ```bash
-   cd "$D/demo-spring" && ./gradlew build
+   cd "$D/gastos-data-expense" && ./gradlew build
+   cd "$D/lib-errors" && ./gradlew build
    ```
 
 Rules:
@@ -59,9 +60,9 @@ Rules:
   generating; otherwise the old version is verified.
 - Generated projects are created in a temporary directory, never inside this repository, and are
   never committed.
-- The full verification is 4 variants, all generated and built when a shared aspect changes:
-  `spring-gradle`, `java-app`, `java-library` and `java-library` with `--with-publish`. Use a
-  distinct `--artifact` for each so they coexist in `$D`.
+- The full verification is 2 variants, both generated and built when a shared aspect changes:
+  one service type (`spring-gradle`, for example `data`) and `lib` (`java-library`, with publishing
+  always on). Their folders differ, so they coexist in `$D`.
 - A template is not considered verified until its generated project builds.
 
 ## Making a change
