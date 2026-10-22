@@ -44,6 +44,14 @@ class ArchitectureTest {
             .that().resideInAPackage("..controller..").and().areTopLevelClasses()
             .should().haveSimpleNameEndingWith("Controller");
 
+    // Top-level classes named *Controller live in the controller package.
+    @ArchTest
+    @ArchTag("layer-controller")
+    static final ArchRule controllerClassesLiveInControllerPackage = classes()
+            .that().haveSimpleNameEndingWith("Controller").and().areTopLevelClasses()
+            .should().resideInAPackage("..controller..")
+            .allowEmptyShould(true);
+
     // ---- service ----
 
     // No layer calls upwards: a service never calls a controller.
@@ -59,6 +67,14 @@ class ArchitectureTest {
     static final ArchRule serviceNamesEndWithService = classes()
             .that().resideInAPackage("..service..").and().areTopLevelClasses()
             .should().haveSimpleNameEndingWith("Service");
+
+    // Top-level classes named *Service live in the service package.
+    @ArchTest
+    @ArchTag("layer-service")
+    static final ArchRule serviceClassesLiveInServicePackage = classes()
+            .that().haveSimpleNameEndingWith("Service").and().areTopLevelClasses()
+            .should().resideInAPackage("..service..")
+            .allowEmptyShould(true);
 
     // The package is always "service", never "business".
     @ArchTest
@@ -82,6 +98,14 @@ class ArchitectureTest {
             .that().resideInAPackage("..repository..").and().areTopLevelClasses()
             .should().haveSimpleNameEndingWith("Repository");
 
+    // Top-level classes named *Repository live in the repository package.
+    @ArchTest
+    @ArchTag("layer-repository")
+    static final ArchRule repositoryClassesLiveInRepositoryPackage = classes()
+            .that().haveSimpleNameEndingWith("Repository").and().areTopLevelClasses()
+            .should().resideInAPackage("..repository..")
+            .allowEmptyShould(true);
+
     // ---- client ----
 
     // A client never calls upwards or a repository.
@@ -97,6 +121,14 @@ class ArchitectureTest {
     static final ArchRule clientNamesEndWithClient = classes()
             .that().resideInAPackage("..client..").and().areTopLevelClasses()
             .should().haveSimpleNameEndingWith("Client");
+
+    // Top-level classes named *Client live in the client package.
+    @ArchTest
+    @ArchTag("layer-client")
+    static final ArchRule clientClassesLiveInClientPackage = classes()
+            .that().haveSimpleNameEndingWith("Client").and().areTopLevelClasses()
+            .should().resideInAPackage("..client..")
+            .allowEmptyShould(true);
 
     // ---- general ----
 
