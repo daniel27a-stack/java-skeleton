@@ -14,7 +14,21 @@ REST service generated with `java-skeleton` (Spring Boot + Gradle).
 
 The service exposes:
 
-- `GET /hello` -> `Hello from {{serviceName}}`
+- `GET /api/{{shortName}}/v1/private/hello` -> `Hello from {{serviceName}}`
+- `GET /actuator/health/liveness` -> liveness probe
+- `GET /actuator/health/readiness` -> readiness probe
+
+### Routes
+
+- `/api/<artifact>/v1/public/...`: reachable from outside; only an `edge` uses it (a convention,
+  there is no public sample endpoint).
+- `/api/<artifact>/v1/private/...`: internal, service-to-service; what `flow`, `data` and `acl` use.
+
+Only an `edge` is exposed outside the platform; `flow`, `data` and `acl` are internal.
+
+`<artifact>` is the short name of the artifact (here `{{shortName}}`). The prefixes are a naming
+convention; enforcing them belongs to the `edge`. Actuator exposes only `health`, outside `/api`,
+and is meant for the platform (liveness and readiness probes), not for API clients.
 
 ## Build and test
 

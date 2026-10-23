@@ -24,7 +24,7 @@ Templates are rendered with Handlebars by `bin/cli.js`.
 - **An `.hbs` file that renders empty is not written.** This lets a file be optional by wrapping it
   in `{{#if}}`. No current template relies on it.
 - **Files without `.hbs` are copied verbatim** (for example `gradlew` and `gradle-wrapper.jar`).
-- **Variables available to templates**: `groupId`, `artifactId`, `serviceName`, `javaVersion` and
+- **Variables available to templates**: `groupId`, `artifactId`, `serviceName`, `shortName` (the `--name` value), `javaVersion` and
   `packagePath`. They are derived from the type, product and name (see `README.md`). The Java version
   is not an input: it is the `JAVA_VERSION` constant in `bin/cli.js`, the only place to change it.
 

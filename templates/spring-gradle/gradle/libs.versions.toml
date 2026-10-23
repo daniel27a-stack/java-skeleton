@@ -7,6 +7,7 @@ wiremock = "3.13.2"
 # Spring Boot BOM, imported as a Gradle platform: it manages the versions below
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
 spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }

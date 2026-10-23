@@ -10,7 +10,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 2. ✅ Gradle split into `gradle/*.gradle`
 3. ✅ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
 4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
-5. ⬜ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
+5. ✅ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
 6. ✅ Multi-stage `Dockerfile` with Spring Boot layers
 7. ✅ Spring library template (auto-configuration) for `lib-*`
 
@@ -32,6 +32,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-23 | **`java-library` (`lib`) is always a Spring Boot auto-configuration library**; no plain-Java variant. Its Spring Boot BOM is a `platform()` at the same version as `spring-gradle`, with no Boot plugin, so the jar stays a plain jar | The card requires `lib-*` libraries to activate by only adding the dependency. The generator has no flag for variants, so none is added |
 | 2026-10-23 | **GitHub Packages is the publication repository of the `lib-*` libraries**; `mavenLocal` is not enough | `mavenLocal` does not exist inside a Docker build (the build container cannot see the developer's `~/.m2`) and does not help CI. GitHub Packages asks for a token even to read, so it is read at build time from the environment or Gradle properties and passed to Docker as a build secret, never as `ARG`/`ENV` |
 | 2026-10-23 | **The registry base URL (host and owner) is one line per generated project: `pirca.registryUrl` in `gradle.properties`**, read with `project.property` by `repositories.gradle` and `publish.gradle` | Switching registry (for example to Artifactory) is a one-line change. A generator option would need a `bin/cli.js` change; a shared Gradle file was rejected because properties are the conventional, overridable place. A missing property fails the build instead of silently falling back to a hard-coded owner |
+| 2026-10-23 | **Route convention `/api/<artifact>/v1/{public,private}/...`**: public/private are URL prefixes (a naming convention; the edge enforces it; `hello` is under `private`, `public` is only a convention for `edge` with no sample); `<artifact>` is the short `--name` value; Actuator exposes only `health` (liveness and readiness probes), outside `/api` | Artifact and version travel in the URL, and external versus service-to-service routes are told apart by name. Health is for the platform, not for API clients |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -314,3 +315,13 @@ in the build step prints 21 with secrets and 0 without. No `ARG`/`ENV` in the Do
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, `release.yml`, root `README.md`, credential variable
 names, dependencies; no Dockerfile added to `lib`.
+
+## 2026-10-23 — ARQ-14: Actuator health probes and /api/<artifact>/v1 routes
+
+**What:** the `spring-gradle` template adds `spring-boot-starter-actuator` (version managed by the Spring Boot BOM) and `application.yml` exposes only `health` with the liveness and readiness probes on. The sample endpoint moves from `GET /hello` to `GET /api/<artifact>/v1/private/hello`, where `<artifact>` is the new template variable `shortName` (the `--name` value, added to the context in `bin/cli.js`). `HelloControllerTest`, the generated `README.md` (route convention and endpoint list), `CONTRIBUTING.md` (variable list) and this file are updated.
+
+**Why:** step 5 of the plan: services need platform probes, and the URL carries the artifact and version and separates public routes (a convention for `edge`, no sample) from private ones (service-to-service; the sample `hello` lives there).
+
+**Verification:** image `java-skeleton:dev` built from the change; `data` (`gastos`/`expense`) built with `docker build -f ci/docker/Dockerfile` and run as a container: `/actuator/health/liveness` and `/actuator/health/readiness` return 200 `{"status":"UP"}`, `/actuator/health` 200, while `/actuator/info`, `/actuator/env` and `/actuator/metrics` return 404; `/api/expense/v1/private/hello` returns 200 `Hello from gastos-data-expense`, `/hello` returns 404 (200 before), `/api/expense/v1/public/hello` returns 404; the hyphenated name `expense-claims` gives `/api/expense-claims/v1/private/hello`. `./gradlew build` is green for `data`, `edge`, `flow` and `acl` (test, intTest and archTest) and for `lib`. The generated `lib-errors` tree is byte-identical to the baseline (sha256). The Dockerfile has no `HEALTHCHECK` (`docker inspect` shows no healthcheck). `application.yml` of `edge`, `flow` and `acl` differs from `data` only in the name, and their `dependencies.gradle` and `libs.versions.toml` are identical. The runtime classpath gained only Actuator and Micrometer modules; no existing dependency changed version.
+
+**Unchanged:** `java-library` template, `Dockerfile` (no `HEALTHCHECK`), `manifest.json`, flags and prompts, root `README.md`.

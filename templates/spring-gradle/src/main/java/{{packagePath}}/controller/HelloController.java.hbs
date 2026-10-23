@@ -13,7 +13,7 @@ public class HelloController {
         this.helloService = helloService;
     }
 
-    @GetMapping("/hello")
+    @GetMapping("/api/{{shortName}}/v1/private/hello")
     public String hello() {
         return helloService.greeting();
     }
