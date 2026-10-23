@@ -49,3 +49,36 @@ archTest.excludeLayers=repository,client
 
 Remove a layer from the list as soon as the artifact gets it. Unknown layer names fail the
 build. A rule of a layer that is not excluded fails if the layer has no classes.
+
+## Using pirca libs
+
+The `lib-*` libraries (`cl.pirca.lib.*`) are published to GitHub Packages, which asks for a token
+even to read. `gradle/repositories.gradle` reads it at build time; it is never stored in the
+project. A build that uses no pirca lib needs no token.
+
+Locally, set a token with the `read:packages` scope in the environment:
+
+```bash
+export GITHUB_ACTOR=<github-user>
+export GITHUB_TOKEN=<token>
+```
+
+or in `~/.gradle/gradle.properties` (not the project one): `gpr.user=<github-user>` and
+`gpr.token=<token>`.
+
+In a Docker build, supply the token as a BuildKit secret:
+
+```bash
+docker build --secret id=github_actor,env=GITHUB_ACTOR --secret id=github_token,env=GITHUB_TOKEN .
+```
+
+and in the Dockerfile:
+
+```dockerfile
+RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
+    GITHUB_ACTOR="$(cat /run/secrets/github_actor)" GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+    ./gradlew build
+```
+
+Never pass the token as `ARG` or `ENV`: it would stay in the image layers and history. A secret
+mount is available only during that `RUN` and is not stored in the image.

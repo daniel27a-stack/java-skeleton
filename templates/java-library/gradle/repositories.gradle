@@ -1,5 +1,20 @@
 // Where dependencies are downloaded from.
-// Private repositories (e.g. GitHub Packages for lib-*) are added here.
+// Maven Central, plus GitHub Packages for the pirca libraries (cl.pirca.lib.*).
+// GitHub Packages asks for a token even to read. It is read at build time from the environment
+// (GITHUB_ACTOR / GITHUB_TOKEN) or from Gradle properties (gpr.user / gpr.token, in
+// ~/.gradle/gradle.properties). Never write it in this project. The repository is only asked for
+// cl.pirca.lib.* groups, so a build that does not use them needs no token.
 repositories {
     mavenCentral()
+    maven {
+        name = 'GitHubPackagesRead'
+        url = uri('https://maven.pkg.github.com/daniel27a-stack/*')
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+            password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.token')
+        }
+        content {
+            includeGroupByRegex 'cl\\.pirca\\.lib\\..*'
+        }
+    }
 }

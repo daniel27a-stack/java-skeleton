@@ -65,6 +65,34 @@ Rules:
   always on). Their folders differ, so they coexist in `$D`.
 - A template is not considered verified until its generated project builds.
 
+## Library publication and consumption (GitHub Packages)
+
+- GitHub Packages is the publication repository of the `lib-*` libraries (`cl.pirca.lib.<name>`).
+  `java-library/gradle/publish.gradle.hbs` publishes to it (repository `GitHubPackages`, URL
+  `https://maven.pkg.github.com/daniel27a-stack/<artifactId>`) and still supports
+  `publishToMavenLocal`.
+- Both templates' `gradle/repositories.gradle` declare `mavenCentral()` and a GitHub Packages
+  repository (`https://maven.pkg.github.com/daniel27a-stack/*`) restricted to the group regex
+  `cl\.pirca\.lib\..*`, so a build that uses no pirca lib needs no token.
+- GitHub Packages asks for a token even to read. Credentials are read at build time from
+  `GITHUB_ACTOR` / `GITHUB_TOKEN` or the Gradle properties `gpr.user` / `gpr.token`
+  (`~/.gradle/gradle.properties`); they are never written in a template or a generated file.
+  Scopes: `read:packages` to consume, `write:packages` to publish.
+- Docker builds receive the token as a BuildKit secret, never as `ARG`/`ENV` (they persist in the
+  image layers and history):
+
+  ```bash
+  docker build --secret id=github_actor,env=GITHUB_ACTOR --secret id=github_token,env=GITHUB_TOKEN .
+  ```
+
+  ```dockerfile
+  RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
+      GITHUB_ACTOR="$(cat /run/secrets/github_actor)" GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+      ./gradlew build
+  ```
+
+- Verifying a change needs no token: generated `data` and `lib` projects build without one.
+
 ## Making a change
 
 - Edit the templates under `templates/`. Change the generator code (`bin/cli.js`) only when the

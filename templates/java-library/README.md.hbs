@@ -56,5 +56,46 @@ Local publishing (to consume it from another project on the same machine):
 ./gradlew publishToMavenLocal
 ```
 
-Uncomment the `repositories` block in `gradle/publish.gradle` to publish to GitHub Packages
-or another Maven repository.
+Publish to GitHub Packages (repository `GitHubPackages` in `gradle/publish.gradle`) with a token
+that has the `write:packages` scope, supplied at build time and never stored in the project:
+
+```bash
+export GITHUB_ACTOR=<github-user>
+export GITHUB_TOKEN=<token>
+./gradlew publish
+```
+
+or set `gpr.user` and `gpr.token` in `~/.gradle/gradle.properties` (not the project one).
+
+### Using other pirca libs
+
+The `lib-*` libraries (`cl.pirca.lib.*`) are published to GitHub Packages, which asks for a token
+even to read. `gradle/repositories.gradle` reads it at build time; it is never stored in the
+project. A build that uses no pirca lib needs no token.
+
+Locally, set a token with the `read:packages` scope in the environment:
+
+```bash
+export GITHUB_ACTOR=<github-user>
+export GITHUB_TOKEN=<token>
+```
+
+or in `~/.gradle/gradle.properties` (not the project one): `gpr.user=<github-user>` and
+`gpr.token=<token>`.
+
+In a Docker build, supply the token as a BuildKit secret:
+
+```bash
+docker build --secret id=github_actor,env=GITHUB_ACTOR --secret id=github_token,env=GITHUB_TOKEN .
+```
+
+and in the Dockerfile:
+
+```dockerfile
+RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
+    GITHUB_ACTOR="$(cat /run/secrets/github_actor)" GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
+    ./gradlew build
+```
+
+Never pass the token as `ARG` or `ENV`: it would stay in the image layers and history. A secret
+mount is available only during that `RUN` and is not stored in the image.
