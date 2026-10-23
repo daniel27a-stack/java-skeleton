@@ -1,0 +1,48 @@
+package {{groupId}};
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.context.annotation.ImportCandidates;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+class LibraryAutoConfigurationIntTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(LibraryAutoConfiguration.class));
+
+    @Test
+    void registersTheLibraryBean() {
+        contextRunner.run(context -> {
+            assertThat(context).hasSingleBean(LibraryInfo.class);
+            assertThat(context.getBean(LibraryInfo.class).name()).isEqualTo("{{artifactId}}");
+        });
+    }
+
+    @Test
+    void aConsumerBeanOverridesTheLibraryBean() {
+        contextRunner.withUserConfiguration(CustomLibraryInfoConfiguration.class).run(context -> {
+            assertThat(context).hasSingleBean(LibraryInfo.class);
+            assertThat(context.getBean(LibraryInfo.class).name()).isEqualTo("custom");
+        });
+    }
+
+    @Test
+    void importsFileListsTheAutoConfiguration() {
+        assertThat(ImportCandidates.load(AutoConfiguration.class, getClass().getClassLoader()).getCandidates())
+                .contains(LibraryAutoConfiguration.class.getName());
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class CustomLibraryInfoConfiguration {
+
+        @Bean
+        LibraryInfo libraryInfo() {
+            return new LibraryInfo("custom");
+        }
+    }
+}

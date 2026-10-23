@@ -1,0 +1,25 @@
+package {{groupId}};
+
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+
+/**
+ * Auto-configuration of the {{artifactId}} library. It is registered in
+ * META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports, so adding
+ * the dependency to a Spring Boot application is enough to activate it.
+ */
+@AutoConfiguration
+public class LibraryAutoConfiguration {
+
+    /**
+     * Creates the library bean unless the application defines its own.
+     *
+     * @return the library information
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public LibraryInfo libraryInfo() {
+        return new LibraryInfo("{{artifactId}}");
+    }
+}

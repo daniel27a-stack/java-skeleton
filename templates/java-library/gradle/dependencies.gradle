@@ -1,17 +1,24 @@
 // Project dependencies. Versions live in gradle/libs.versions.toml.
 dependencies {
+    // Spring Boot BOM as a platform: it manages the versions of every Spring Boot dependency.
+    implementation platform(libs.spring.boot.bom)
+    implementation libs.spring.boot.autoconfigure
+
     // api '...'            // dependencies exposed to consumers
     // implementation '...' // internal dependencies
 
-    testImplementation platform(libs.junit.bom)
+    testImplementation platform(libs.spring.boot.bom)
+    testImplementation libs.spring.boot.starter.test
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.platform.launcher
 
-    intTestImplementation platform(libs.junit.bom)
+    intTestImplementation platform(libs.spring.boot.bom)
+    intTestImplementation libs.spring.boot.autoconfigure
+    intTestImplementation libs.spring.boot.starter.test
     intTestImplementation libs.junit.jupiter
     intTestRuntimeOnly libs.junit.platform.launcher
 
-    archTestImplementation platform(libs.junit.bom)
+    archTestImplementation platform(libs.spring.boot.bom)
     archTestImplementation libs.junit.jupiter
     archTestImplementation libs.archunit.junit5
     archTestRuntimeOnly libs.junit.platform.launcher
