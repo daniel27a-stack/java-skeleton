@@ -282,6 +282,6 @@ a Docker build secret (`--secret`, `RUN --mount=type=secret`), not as `ARG`/`ENV
 nor in CI. GitHub Packages requires a token even to read, so it must reach the build without being stored
 in the image or the project.
 
-**Verification:** image rebuilt; `data` and `lib` generated and `./gradlew build` green with no token set; the generated checksums differ from the baseline only in `gradle/repositories.gradle` (both), `gradle/publish.gradle` and `README.md` (both); `tasks --all` in the lib lists `publishMavenPublicationToGitHubPackagesRepository`; `publishToMavenLocal` passes; no `ghp_`/`github_pat_` literal in the generated projects. Control: a throw-away `cl.pirca.lib.fake` dependency without a token fails resolution through the GitHub Packages repository. Nothing was published (needs network and secrets).
+**Verification:** image rebuilt; `data` and `lib` generated and `./gradlew build` green with no token set; the generated checksums differ from the baseline only in `gradle/repositories.gradle` (both), `gradle/publish.gradle` and `README.md` (both); `tasks --all` in the lib lists `publishMavenPublicationToGitHubPackagesRepository`; `publishToMavenLocal` passes; no `ghp_`/`github_pat_` literal in the generated projects. The GitHub Packages repository could not be exercised: a throw-away `cl.pirca.lib.fake` dependency failed at Maven Central (no network in the sandbox) before reaching it. Nothing was published (needs network and secrets).
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, flags and prompts, dependencies, no Dockerfile or workflow added.
