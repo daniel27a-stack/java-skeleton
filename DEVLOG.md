@@ -12,7 +12,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
 5. ⬜ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
 6. ✅ Multi-stage `Dockerfile` with Spring Boot layers
-7. ⬜ Spring library template (auto-configuration) for `lib-*`
+7. ✅ Spring library template (auto-configuration) for `lib-*`
 
 ## Template decisions
 
@@ -240,3 +240,29 @@ jar was started inside the container instead.
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, the `java-library` template, dependencies and
 tests, the Gradle wrapper, CI workflows.
+
+## 2026-10-23 — ARQ-16: Spring Boot auto-configuration library template
+
+**What:** the `java-library` template (type `lib`) now generates a Spring Boot 4 auto-configuration
+library instead of plain Java. `Example` and its tests are replaced by `LibraryAutoConfiguration`
+(`@AutoConfiguration`), a `LibraryInfo` record bean with `@ConditionalOnMissingBean`, and
+`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`, so adding the
+dependency to a Spring Boot application is enough to activate it. Spring Boot `4.1.1` (same as
+`spring-gradle`) is imported as a Gradle `platform()`, without the Spring Boot plugin, so the
+artifact stays a plain jar; the separate `junit-bom` is dropped (the Boot BOM manages JUnit). A unit
+test checks the bean, and an `intTest` uses `ApplicationContextRunner` to check activation, the
+consumer override and the `.imports` file. Roadmap step 7 is marked done; the root `README.md`
+table and the template `README.md.hbs` describe the new kind of library.
+
+**Why:** the `lib-*` libraries must be usable by only adding the dependency, with no `@Import` or
+`@ComponentScan` in the consumer.
+
+**Verification:** image rebuilt; `lib-errors` generated and `./gradlew build` passes (test 1, intTest 3,
+archTest 1 tests, 0 failures); the jar holds the `.imports` file and the classes at its root, no
+`BOOT-INF/`; the published POM imports the Boot BOM. After `publishToMavenLocal` (writes to
+`~/.m2`), a generated `data` project with the library as a dependency autowires `LibraryInfo`
+without any `@Import` in a `@SpringBootTest` (temporary copy, not committed). Controls: a wrong FQCN in the
+`.imports` file fails `intTest`; `archTest.excludeLayers=bogus` fails with "unknown layer" and an
+empty list fails `archTest`. `data` builds and its `runtimeClasspath` is identical to the baseline.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, `spring-gradle`, generator inputs, publishing.

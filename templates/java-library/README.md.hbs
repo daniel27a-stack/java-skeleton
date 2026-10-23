@@ -1,6 +1,18 @@
 # {{artifactId}}
 
-Java library generated with `java-skeleton` (Gradle + `java-library` plugin).
+Spring Boot auto-configuration library generated with `java-skeleton` (Gradle + `java-library`
+plugin, Spring Boot BOM imported as a `platform()`; it is a plain jar, not an executable one).
+
+## Spring Boot auto-configuration
+
+Adding this library as a dependency of a Spring Boot application is enough to activate it: no
+`@Import` or `@ComponentScan` is needed. The auto-configuration classes are listed in
+`src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
+
+The placeholder `LibraryAutoConfiguration` registers a `LibraryInfo` bean with
+`@ConditionalOnMissingBean`, so a consumer can override it by defining its own bean. Replace it
+with the real technical content of the library and keep new auto-configuration classes listed in
+the `.imports` file. `LibraryAutoConfigurationIntTest` proves the activation.
 
 ## Build and test
 

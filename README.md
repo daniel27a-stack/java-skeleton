@@ -3,10 +3,10 @@
 Generator of **pirca** projects (Java + Gradle). It asks only for the artifact type, the product
 and the name, and derives everything else. Five types:
 
-| Type                          | Template        | Purpose                          |
-|-------------------------------|-----------------|----------------------------------|
-| `edge`, `flow`, `data`, `acl` | `spring-gradle` | Spring Boot REST service         |
-| `lib`                         | `java-library`  | Reusable library                 |
+| Type                          | Template        | Purpose                                |
+|-------------------------------|-----------------|----------------------------------------|
+| `edge`, `flow`, `data`, `acl` | `spring-gradle` | Spring Boot REST service               |
+| `lib`                         | `java-library`  | Spring Boot auto-configuration library |
 
 The generated project ships with the **Gradle wrapper embedded**, so it builds with
 `./gradlew build` without Gradle installed (only a JDK is needed).
