@@ -74,8 +74,7 @@ docker build --secret id=github_actor,env=GITHUB_ACTOR --secret id=github_token,
 ```
 
 The generated `ci/docker/Dockerfile` already reads both secrets (optional: without them the
-build still works when no pirca lib is used). Never pass the token as `ARG` or `ENV`: they persist
-in the image layers and history.
+build still works when no pirca lib is used).
 
 Never pass the token as `ARG` or `ENV`: it would stay in the image layers and history. A secret
 mount is available only during that `RUN` and is not stored in the image.
