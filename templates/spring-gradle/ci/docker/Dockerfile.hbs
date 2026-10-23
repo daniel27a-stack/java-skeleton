@@ -4,9 +4,17 @@ WORKDIR /workspace
 # Build files first: this layer and the dependency resolution stay cached while only src/ changes.
 COPY gradlew settings.gradle build.gradle gradle.properties ./
 COPY gradle gradle
-RUN ./gradlew --no-daemon dependencies
+# GITHUB_ACTOR / GITHUB_TOKEN come from optional BuildKit secrets (never ARG/ENV); without
+# them the build still works as long as no pirca library is used.
+RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
+    if [ -f /run/secrets/github_actor ]; then export GITHUB_ACTOR="$(cat /run/secrets/github_actor)"; fi; \
+    if [ -f /run/secrets/github_token ]; then export GITHUB_TOKEN="$(cat /run/secrets/github_token)"; fi; \
+    ./gradlew --no-daemon dependencies
 COPY src src
-RUN ./gradlew --no-daemon bootJar \
+RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
+    if [ -f /run/secrets/github_actor ]; then export GITHUB_ACTOR="$(cat /run/secrets/github_actor)"; fi; \
+    if [ -f /run/secrets/github_token ]; then export GITHUB_TOKEN="$(cat /run/secrets/github_token)"; fi; \
+    ./gradlew --no-daemon bootJar \
  && java -Djarmode=tools -jar build/libs/app.jar extract --layers --destination build/extracted
 
 # Runtime stage: JRE only, non-root, Spring Boot layers.

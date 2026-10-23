@@ -69,11 +69,14 @@ Rules:
 
 - GitHub Packages is the publication repository of the `lib-*` libraries (`cl.pirca.lib.<name>`).
   `java-library/gradle/publish.gradle.hbs` publishes to it (repository `GitHubPackages`, URL
-  `https://maven.pkg.github.com/daniel27a-stack/<artifactId>`) and still supports
-  `publishToMavenLocal`.
+  `<registryUrl>/<artifactId>`) and still supports `publishToMavenLocal`.
+- The registry base URL (host and owner) is written once per generated project: the
+  `pirca.registryUrl` line of `gradle.properties` (one copy in each template). Both templates'
+  `gradle/repositories.gradle` and `publish.gradle` read it with `project.property`, so switching
+  to another registry (for example Artifactory) means changing that one line.
 - Both templates' `gradle/repositories.gradle` declare `mavenCentral()` and a GitHub Packages
-  repository (`https://maven.pkg.github.com/daniel27a-stack/*`) restricted to the group regex
-  `cl\.pirca\.lib\..*`, so a build that uses no pirca lib needs no token.
+  repository (`<registryUrl>/*`) restricted to the group regex `cl\.pirca\.lib\..*`, so a build
+  that uses no pirca lib needs no token.
 - GitHub Packages asks for a token even to read. Credentials are read at build time from
   `GITHUB_ACTOR` / `GITHUB_TOKEN` or the Gradle properties `gpr.user` / `gpr.token`
   (`~/.gradle/gradle.properties`); they are never written in a template or a generated file.
@@ -85,11 +88,10 @@ Rules:
   docker build --secret id=github_actor,env=GITHUB_ACTOR --secret id=github_token,env=GITHUB_TOKEN .
   ```
 
-  ```dockerfile
-  RUN --mount=type=secret,id=github_actor --mount=type=secret,id=github_token \
-      GITHUB_ACTOR="$(cat /run/secrets/github_actor)" GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-      ./gradlew build
-  ```
+  The generated service `ci/docker/Dockerfile` already does this: both Gradle steps
+  (`dependencies` and `bootJar`) mount the secrets with `--mount=type=secret` and export
+  `GITHUB_ACTOR` / `GITHUB_TOKEN` only when the secret file exists, so a build without secrets
+  still works when no pirca lib is used. The `lib` template has no Dockerfile.
 
 - Verifying a change needs no token: generated `data` and `lib` projects build without one.
 

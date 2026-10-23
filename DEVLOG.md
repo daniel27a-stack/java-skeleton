@@ -285,3 +285,30 @@ in the image or the project.
 **Verification:** image rebuilt; `data` and `lib` generated and `./gradlew build` green with no token set; the generated checksums differ from the baseline only in `gradle/repositories.gradle` (both), `gradle/publish.gradle` and `README.md` (both); `tasks --all` in the lib lists `publishMavenPublicationToGitHubPackagesRepository`; `publishToMavenLocal` passes; no `ghp_`/`github_pat_` literal in the generated projects. Control (temp copy, `compileJava --offline`, no token): a throw-away `cl.pirca.lib.fake:fake:1.0` dependency is looked up in both Maven Central and GitHub Packages (both fail offline), while `org.nogroup.fake:fake:1.0` is looked up in Maven Central only, so the GitHub Packages repository is active and consulted only for `cl.pirca.lib.*`. Nothing was published (needs network and secrets).
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, flags and prompts, dependencies, no Dockerfile or workflow added.
+
+## 2026-10-23 — ARQ-56: Dockerfile receives the token; one registry line
+
+**What:** the `spring-gradle` `ci/docker/Dockerfile` runs both Gradle steps (`dependencies`, `bootJar`)
+with `--mount=type=secret` for `github_actor` and `github_token`, exporting `GITHUB_ACTOR` /
+`GITHUB_TOKEN` only when the secret file exists (no `ARG`/`ENV`; a build without secrets still works
+when no pirca lib is used). The registry base URL is now one line, `pirca.registryUrl` in
+`gradle.properties` (one copy per template), read with `project.property` by both
+`gradle/repositories.gradle` and `java-library`'s `gradle/publish.gradle`. `CONTRIBUTING.md` and both
+generated READMEs describe it and drop the Dockerfile snippet.
+
+**Why:** completes ARQ-18. A service image must be able to resolve pirca libs without leaking the
+token, and moving to another registry (for example Artifactory) must be a one-line change.
+
+**Verification:** image rebuilt; `data` and `lib` regenerated; `./gradlew build` is successful in both
+with no token. Repository URLs from an init script are identical to the baseline (`REPO` in both, `PUB`
+in the lib), `publishToMavenLocal` passes, and `maven.pkg.github.com` / `daniel27a-stack` appear once
+per project (`gradle.properties`). On temp copies, changing that line gives
+`https://artifactory.example.test/pirca/*` (and `/lib-errors` for publishing). Data image: builds
+without secrets and with `--secret`; `docker history --no-trunc` of the final and `--target build`
+images has no occurrence of the fake token, and a file scan of `/workspace /root /etc /home /usr/local
+/opt` (build) and `/app /etc /home /opt` (final) finds none; a temporary `printenv GITHUB_TOKEN | wc -c`
+in the build step prints 21 with secrets and 0 without. No `ARG`/`ENV` in the Dockerfile. Not run: the
+`ARG` control for the history check, a full `/` filesystem scan, a real GitHub Packages download.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, `release.yml`, root `README.md`, credential variable
+names, dependencies; no Dockerfile added to `lib`.
