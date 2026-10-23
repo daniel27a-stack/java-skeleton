@@ -49,8 +49,7 @@ class ArchitectureTest {
     @ArchTag("layer-controller")
     static final ArchRule controllerClassesLiveInControllerPackage = classes()
             .that().haveSimpleNameEndingWith("Controller").and().areTopLevelClasses()
-            .should().resideInAPackage("..controller..")
-            .allowEmptyShould(true);
+            .should().resideInAPackage("..controller..");
 
     // ---- service ----
 
@@ -73,8 +72,7 @@ class ArchitectureTest {
     @ArchTag("layer-service")
     static final ArchRule serviceClassesLiveInServicePackage = classes()
             .that().haveSimpleNameEndingWith("Service").and().areTopLevelClasses()
-            .should().resideInAPackage("..service..")
-            .allowEmptyShould(true);
+            .should().resideInAPackage("..service..");
 
     // The package is always "service", never "business".
     @ArchTest
@@ -103,8 +101,7 @@ class ArchitectureTest {
     @ArchTag("layer-repository")
     static final ArchRule repositoryClassesLiveInRepositoryPackage = classes()
             .that().haveSimpleNameEndingWith("Repository").and().areTopLevelClasses()
-            .should().resideInAPackage("..repository..")
-            .allowEmptyShould(true);
+            .should().resideInAPackage("..repository..");
 
     // ---- client ----
 
@@ -127,8 +124,7 @@ class ArchitectureTest {
     @ArchTag("layer-client")
     static final ArchRule clientClassesLiveInClientPackage = classes()
             .that().haveSimpleNameEndingWith("Client").and().areTopLevelClasses()
-            .should().resideInAPackage("..client..")
-            .allowEmptyShould(true);
+            .should().resideInAPackage("..client..");
 
     // ---- general ----
 

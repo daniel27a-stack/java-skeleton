@@ -28,6 +28,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-12 | **Three test suites** (`test`, `intTest`, `archTest`) with the JVM Test Suite plugin, all part of `check`, `test` first (`mustRunAfter`) | Separate source sets and tasks, each runnable alone. New suites do not see the main classes by default in Gradle 9, so they declare `implementation project()` |
 | 2026-10-12 | One **general `ArchitectureTest`** (same source in all templates) for the ARQ-25 layers; layers a project lacks are opted out with `archTest.excludeLayers` in `gradle.properties` (unknown names fail the build) | Every layer rule is tagged `layer-<layer>` (`@ArchTag`), and the opt-out maps to JUnit `excludeTags`. `archRule.failOnEmptyShould=true` so a rule never passes silently on an empty layer. A "no package cycles" rule applies everywhere |
 | 2026-10-22 | Inverse naming rules (suffix outside its layer package) use `allowEmptyShould(true)` | Each rule is tied to a suffix, so a project with no class of that suffix must still pass; the existing layer rules keep `failOnEmptyShould=true` |
+| 2026-10-23 | Inverse naming rules no longer use `allowEmptyShould(true)` (supersedes the ARQ-29 row above) | An enabled layer with no class of its suffix must fail like every other layer rule, not pass silently. Layers a project does not have are opted out with `archTest.excludeLayers`; the template defaults still build |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -194,3 +195,22 @@ class of each of the four suffixes fails its own rule. `UserService` in `..contr
 passes (all layers excluded). The diff only adds rule blocks and one README sentence.
 
 **Unchanged:** `CONTRIBUTING.md`, `gradle.properties`, `gradle/*.gradle`, dependencies.
+
+## 2026-10-23 — ARQ-48: inverse naming rules fail on an empty layer
+
+**What:** removed `.allowEmptyShould(true)` from the four inverse naming rules (`*Controller`,
+`*Service`, `*Repository`, `*Client`) of the general `ArchitectureTest`, in both the `spring-gradle`
+and `java-library` templates (the two files stay identical). This supersedes the ARQ-29 decision
+that those rules use `allowEmptyShould(true)`.
+
+**Why:** an enabled layer with no class of its suffix passed `archTest` silently, unlike every other
+layer rule. Projects without a layer opt out through `archTest.excludeLayers`.
+
+**Verification:** image rebuilt, `data` and `lib` regenerated; `./gradlew build archTest` (`data`)
+and `./gradlew build` (`lib`) are successful unmodified. `data` with `excludeLayers=repository`
+fails `clientClassesLiveInClientPackage`; with `excludeLayers=client` it fails
+`repositoryClassesLiveInRepositoryPackage` (the baseline passed both). A `StrayController` or
+`StrayService` in the root package fails its rule and passes once removed. `archTestRuntimeClasspath`
+is identical to the baseline. Not run: a stray `StrayClient` with `excludeLayers` empty.
+
+**Unchanged:** `README.md`, `CONTRIBUTING.md`, `gradle.properties`, `gradle/*.gradle`, dependencies.
