@@ -27,6 +27,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-11 | **Branching and releases**: `feature/ARQ-n` → PR → `main` → tag `vX.Y.Z`; no `develop` | Merging to `main` certifies (reviewed PR; green pipeline once CI exists), a tag publishes (`release.yml` runs on `v*`). `main` is protected: no direct or force pushes (admins included), linear history, squash merge only, branches deleted on merge. The repo was made public because GitHub Free does not protect private repos. Protection is a repository ruleset (`protect-main`, no bypass actors): classic branch protection with 0 required approvals still let the owner push directly |
 | 2026-10-12 | **Three test suites** (`test`, `intTest`, `archTest`) with the JVM Test Suite plugin, all part of `check`, `test` first (`mustRunAfter`) | Separate source sets and tasks, each runnable alone. New suites do not see the main classes by default in Gradle 9, so they declare `implementation project()` |
 | 2026-10-12 | One **general `ArchitectureTest`** (same source in all templates) for the ARQ-25 layers; layers a project lacks are opted out with `archTest.excludeLayers` in `gradle.properties` (unknown names fail the build) | Every layer rule is tagged `layer-<layer>` (`@ArchTag`), and the opt-out maps to JUnit `excludeTags`. `archRule.failOnEmptyShould=true` so a rule never passes silently on an empty layer. A "no package cycles" rule applies everywhere |
+| 2026-10-22 | Inverse naming rules (suffix outside its layer package) use `allowEmptyShould(true)` | Each rule is tied to a suffix, so a project with no class of that suffix must still pass; the existing layer rules keep `failOnEmptyShould=true` |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -169,3 +170,27 @@ re-asks invalid values and Ctrl-C exits with 130 and no files.
 
 **Unchanged:** dependencies and versions, `archTest.excludeLayers`, the Gradle wrapper, the
 Dockerfile, `scripts/java-skeleton`, the release workflow and the `spring-gradle` example classes.
+
+## 2026-10-22 — ARQ-29: inverse naming rules in archTest
+
+**What:** the general `ArchitectureTest` (identical in the `spring-gradle` and `java-library`
+templates) gains four inverse naming rules, one per layer: a top-level class named `*Controller`,
+`*Service`, `*Repository` or `*Client` must live in the matching `..<layer>..` package (sub-packages
+included). Each rule carries `@ArchTag("layer-<layer>")`, so `archTest.excludeLayers` opts it out
+like the existing rules, and uses `allowEmptyShould(true)`. Matching is by suffix on top-level classes
+(`UserServiceImpl` and nested classes such as `Outer.InnerController` are not affected). The existing
+rules, their tags and the `gradle.properties` keys are unchanged. Both generated `README.md.hbs`
+now describe the naming rules in both directions.
+
+**Why:** the existing rules only checked classes already inside a layer package, so a
+`StrayController` in the root package passed `archTest` (confirmed against the baseline).
+
+**Verification:** image rebuilt, `data` and `lib` regenerated, `./gradlew build` and `archTest`
+pass unmodified. A `StrayController` or `StrayService` in the root package of `data` now fails
+`archTest` and the report names the class (baseline passed). With `excludeLayers` empty, a stray
+class of each of the four suffixes fails its own rule. `UserService` in `..controller` fails;
+`UserServiceImpl`, a nested `InnerController` and `FooController` in `controller.sub` pass.
+`StrayClient` passes with `client` excluded (default) and the `lib` with a `StrayController`
+passes (all layers excluded). The diff only adds rule blocks and one README sentence.
+
+**Unchanged:** `CONTRIBUTING.md`, `gradle.properties`, `gradle/*.gradle`, dependencies.
