@@ -31,6 +31,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-23 | Inverse naming rules no longer use `allowEmptyShould(true)` (supersedes the ARQ-29 row above) | An enabled layer with no class of its suffix must fail like every other layer rule, not pass silently. Layers a project does not have are opted out with `archTest.excludeLayers`; the template defaults still build |
 | 2026-10-23 | **`java-library` (`lib`) is always a Spring Boot auto-configuration library**; no plain-Java variant. Its Spring Boot BOM is a `platform()` at the same version as `spring-gradle`, with no Boot plugin, so the jar stays a plain jar | The card requires `lib-*` libraries to activate by only adding the dependency. The generator has no flag for variants, so none is added |
 | 2026-10-23 | **GitHub Packages is the publication repository of the `lib-*` libraries**; `mavenLocal` is not enough | `mavenLocal` does not exist inside a Docker build (the build container cannot see the developer's `~/.m2`) and does not help CI. GitHub Packages asks for a token even to read, so it is read at build time from the environment or Gradle properties and passed to Docker as a build secret, never as `ARG`/`ENV` |
+| 2026-10-23 | **The registry base URL (host and owner) is one line per generated project: `pirca.registryUrl` in `gradle.properties`**, read with `project.property` by `repositories.gradle` and `publish.gradle` | Switching registry (for example to Artifactory) is a one-line change. A generator option would need a `bin/cli.js` change; a shared Gradle file was rejected because properties are the conventional, overridable place. A missing property fails the build instead of silently falling back to a hard-coded owner |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -285,3 +286,31 @@ in the image or the project.
 **Verification:** image rebuilt; `data` and `lib` generated and `./gradlew build` green with no token set; the generated checksums differ from the baseline only in `gradle/repositories.gradle` (both), `gradle/publish.gradle` and `README.md` (both); `tasks --all` in the lib lists `publishMavenPublicationToGitHubPackagesRepository`; `publishToMavenLocal` passes; no `ghp_`/`github_pat_` literal in the generated projects. Control (temp copy, `compileJava --offline`, no token): a throw-away `cl.pirca.lib.fake:fake:1.0` dependency is looked up in both Maven Central and GitHub Packages (both fail offline), while `org.nogroup.fake:fake:1.0` is looked up in Maven Central only, so the GitHub Packages repository is active and consulted only for `cl.pirca.lib.*`. Nothing was published (needs network and secrets).
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, flags and prompts, dependencies, no Dockerfile or workflow added.
+
+## 2026-10-23 — ARQ-56: Dockerfile receives the token; one registry line
+
+**What:** the `spring-gradle` `ci/docker/Dockerfile` runs both Gradle steps (`dependencies`, `bootJar`)
+with `--mount=type=secret` for `github_actor` and `github_token`, exporting `GITHUB_ACTOR` /
+`GITHUB_TOKEN` only when the secret file exists (no `ARG`/`ENV`; a build without secrets still works
+when no pirca lib is used). The registry base URL is now one line, `pirca.registryUrl` in
+`gradle.properties` (one copy per template), read with `project.property` by both
+`gradle/repositories.gradle` and `java-library`'s `gradle/publish.gradle`. `CONTRIBUTING.md` and both
+generated READMEs describe it and drop the Dockerfile snippet.
+
+**Why:** completes ARQ-18. A service image must be able to resolve pirca libs without leaking the
+token, and moving to another registry (for example Artifactory) must be a one-line change.
+
+**Verification:** image rebuilt; `data` and `lib` regenerated; `./gradlew build` is successful in both
+with no token. Repository URLs from an init script are identical to the baseline (`REPO` in both, `PUB`
+in the lib), `publishToMavenLocal` passes, and `maven.pkg.github.com` / `daniel27a-stack` appear once
+per project (`gradle.properties`). On temp copies, changing that line gives
+`https://artifactory.example.test/pirca/*` (and `/lib-errors` for publishing). Data image: builds
+without secrets and with `--secret`; `docker history --no-trunc` of the final and `--target build`
+images has no occurrence of the fake token, and a file scan of `/workspace /root /tmp /run /etc /home /var
+/opt` (build) and `/app /etc /tmp /home /root /var /opt` (final) finds none; a temporary `printenv GITHUB_TOKEN | wc -c`
+in the build step prints 21 with secrets and 0 without. No `ARG`/`ENV` in the Dockerfile. QA also ran the
+`ARG` control (the fake token appears twice in `docker history`). Not run: a full `/` filesystem scan
+(targeted directories were scanned), a real GitHub Packages download.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, `release.yml`, root `README.md`, credential variable
+names, dependencies; no Dockerfile added to `lib`.

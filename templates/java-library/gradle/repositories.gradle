@@ -1,5 +1,6 @@
 // Where dependencies are downloaded from.
-// Maven Central, plus GitHub Packages for the pirca libraries (cl.pirca.lib.*).
+// Maven Central, plus the registry of the pirca libraries (cl.pirca.lib.*), whose base URL is
+// pirca.registryUrl in gradle.properties.
 // GitHub Packages asks for a token even to read. It is read at build time from the environment
 // (GITHUB_ACTOR / GITHUB_TOKEN) or from Gradle properties (gpr.user / gpr.token, in
 // ~/.gradle/gradle.properties). Never write it in this project. The repository is only asked for
@@ -8,7 +9,7 @@ repositories {
     mavenCentral()
     maven {
         name = 'GitHubPackagesRead'
-        url = uri('https://maven.pkg.github.com/daniel27a-stack/*')
+        url = uri("${project.property('pirca.registryUrl')}/*")
         credentials {
             username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
             password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.token')
