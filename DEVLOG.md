@@ -234,7 +234,9 @@ fixed jar name in every generated project.
 and `data-expense-1.0.0-plain.jar`; `docker build -f ci/docker/Dockerfile` succeeds; the
 container runs as `app` (uid 999, `Config.User` = `app`), `/app` holds the extracted layout, and
 `curl localhost:8080/hello` returns `Hello from gastos-data-expense`; after changing only a file
-under `src/`, the rebuild reports the `dependencies` step as `CACHED`.
+under `src/`, the rebuild reports the `dependencies` step as `CACHED`. Not run: `java -jar
+build/libs/app.jar` on the host (host JDK is 21, the service is compiled for Java 25); the same
+jar was started inside the container instead.
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, the `java-library` template, dependencies and
 tests, the Gradle wrapper, CI workflows.
