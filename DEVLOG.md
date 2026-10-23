@@ -11,7 +11,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 3. ✅ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
 4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
 5. ⬜ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
-6. ⬜ Multi-stage `Dockerfile` with Spring Boot layers
+6. ✅ Multi-stage `Dockerfile` with Spring Boot layers
 7. ⬜ Spring library template (auto-configuration) for `lib-*`
 
 ## Template decisions
@@ -214,3 +214,27 @@ fails `clientClassesLiveInClientPackage`; with `excludeLayers=client` it fails
 is identical to the baseline. Not run: a stray `StrayClient` with `excludeLayers` empty.
 
 **Unchanged:** `README.md`, `CONTRIBUTING.md`, `gradle.properties`, `gradle/*.gradle`, dependencies.
+
+## 2026-10-23 — ARQ-15: multi-stage Dockerfile with Spring Boot layers
+
+**What:** `spring-gradle` projects (`edge`, `flow`, `data`, `acl`) now include
+`ci/docker/Dockerfile` and a root `.dockerignore`. The Dockerfile has a JDK build stage (the
+project's Gradle wrapper; build files are copied and dependencies resolved before `src/`, so the
+dependency layer stays cached) and a JRE-only runtime stage that runs as the non-root user `app`
+and copies the layers extracted with `-Djarmode=tools extract --layers` in separate `COPY`
+instructions. The Java version in the base images comes from `javaVersion`
+(`JAVA_VERSION` in `bin/cli.js`). New `gradle/packaging.gradle` names the `bootJar` `app.jar`.
+Roadmap step 6 is marked done.
+
+**Why:** a service must be deployable as a small, cache-friendly, non-root image, with the same
+fixed jar name in every generated project.
+
+**Verification:** image rebuilt; `data` and `lib` generated and built with `./gradlew build`
+(both pass); `lib` has no Dockerfile or `.dockerignore`; the `data` `build/libs` holds `app.jar`
+and `data-expense-1.0.0-plain.jar`; `docker build -f ci/docker/Dockerfile` succeeds; the
+container runs as `app` (uid 999, `Config.User` = `app`), `/app` holds the extracted layout, and
+`curl localhost:8080/hello` returns `Hello from gastos-data-expense`; after changing only a file
+under `src/`, the rebuild reports the `dependencies` step as `CACHED`.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, the `java-library` template, dependencies and
+tests, the Gradle wrapper, CI workflows.

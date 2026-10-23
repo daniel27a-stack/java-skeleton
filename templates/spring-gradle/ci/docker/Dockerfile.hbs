@@ -1,0 +1,22 @@
+# Build stage: JDK + the project's Gradle wrapper.
+FROM eclipse-temurin:{{javaVersion}}-jdk AS build
+WORKDIR /workspace
+# Build files first: this layer and the dependency resolution stay cached while only src/ changes.
+COPY gradlew settings.gradle build.gradle gradle.properties ./
+COPY gradle gradle
+RUN ./gradlew --no-daemon dependencies
+COPY src src
+RUN ./gradlew --no-daemon bootJar \
+ && java -Djarmode=tools -jar build/libs/app.jar extract --layers --destination build/extracted
+
+# Runtime stage: JRE only, non-root, Spring Boot layers.
+FROM eclipse-temurin:{{javaVersion}}-jre
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+WORKDIR /app
+COPY --from=build /workspace/build/extracted/dependencies/ ./
+COPY --from=build /workspace/build/extracted/spring-boot-loader/ ./
+COPY --from=build /workspace/build/extracted/snapshot-dependencies/ ./
+COPY --from=build /workspace/build/extracted/application/ ./
+USER app
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

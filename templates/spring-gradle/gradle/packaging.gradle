@@ -1,0 +1,4 @@
+// Packaging: the executable Spring Boot jar has a fixed name so ci/docker/Dockerfile can refer to it.
+tasks.named('bootJar') {
+    archiveFileName = 'app.jar'
+}
