@@ -21,7 +21,7 @@ class HelloControllerTest {
 
     @Test
     void helloReturnsGreeting() throws Exception {
-        mockMvc.perform(get("/hello"))
+        mockMvc.perform(get("/api/{{shortName}}/v1/private/hello"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello from {{serviceName}}"));
     }

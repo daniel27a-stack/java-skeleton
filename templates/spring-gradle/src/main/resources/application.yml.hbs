@@ -1,3 +1,12 @@
 spring:
   application:
     name: {{serviceName}}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

@@ -145,6 +145,7 @@ async function main() {
     serviceName,
     groupId,
     artifactId,
+    shortName: name,
     javaVersion: JAVA_VERSION,
     packagePath: groupId.replace(/\./g, '/'),
   };
