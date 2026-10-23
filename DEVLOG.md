@@ -30,6 +30,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-22 | Inverse naming rules (suffix outside its layer package) use `allowEmptyShould(true)` | Each rule is tied to a suffix, so a project with no class of that suffix must still pass; the existing layer rules keep `failOnEmptyShould=true` |
 | 2026-10-23 | Inverse naming rules no longer use `allowEmptyShould(true)` (supersedes the ARQ-29 row above) | An enabled layer with no class of its suffix must fail like every other layer rule, not pass silently. Layers a project does not have are opted out with `archTest.excludeLayers`; the template defaults still build |
 | 2026-10-23 | **`java-library` (`lib`) is always a Spring Boot auto-configuration library**; no plain-Java variant. Its Spring Boot BOM is a `platform()` at the same version as `spring-gradle`, with no Boot plugin, so the jar stays a plain jar | The card requires `lib-*` libraries to activate by only adding the dependency. The generator has no flag for variants, so none is added |
+| 2026-10-23 | **GitHub Packages is the publication repository of the `lib-*` libraries**; `mavenLocal` is not enough | `mavenLocal` does not exist inside a Docker build (the build container cannot see the developer's `~/.m2`) and does not help CI. GitHub Packages asks for a token even to read, so it is read at build time from the environment or Gradle properties and passed to Docker as a build secret, never as `ARG`/`ENV` |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -267,3 +268,20 @@ without any `@Import` in a `@SpringBootTest` (temporary copy, not committed). Co
 empty list fails `archTest`. `data` builds and its `runtimeClasspath` is identical to the baseline.
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, `spring-gradle`, generator inputs, publishing.
+
+## 2026-10-23 — ARQ-18: GitHub Packages as the lib publication repository
+
+**What:** `lib` projects now publish to GitHub Packages (active `GitHubPackages` repository in
+`gradle/publish.gradle`, `publishToMavenLocal` kept). Both templates' `gradle/repositories.gradle`
+add a GitHub Packages repository next to `mavenCentral()`, restricted to `cl.pirca.lib.*`. Credentials
+come from `GITHUB_ACTOR` / `GITHUB_TOKEN` or the Gradle properties `gpr.user` / `gpr.token`, never from
+a file. `CONTRIBUTING.md` and both generated `README.md` explain how to supply the token locally and as
+a Docker build secret (`--secret`, `RUN --mount=type=secret`), not as `ARG`/`ENV`.
+
+**Why:** services need to use the `lib-*` libraries; `mavenLocal` does not work inside a Docker build
+nor in CI. GitHub Packages requires a token even to read, so it must reach the build without being stored
+in the image or the project.
+
+**Verification:** image rebuilt; `data` and `lib` generated and `./gradlew build` green with no token set; the generated checksums differ from the baseline only in `gradle/repositories.gradle` (both), `gradle/publish.gradle` and `README.md` (both); `tasks --all` in the lib lists `publishMavenPublicationToGitHubPackagesRepository`; `publishToMavenLocal` passes; no `ghp_`/`github_pat_` literal in the generated projects. Control (temp copy, `compileJava --offline`, no token): a throw-away `cl.pirca.lib.fake:fake:1.0` dependency is looked up in both Maven Central and GitHub Packages (both fail offline), while `org.nogroup.fake:fake:1.0` is looked up in Maven Central only, so the GitHub Packages repository is active and consulted only for `cl.pirca.lib.*`. Nothing was published (needs network and secrets).
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, flags and prompts, dependencies, no Dockerfile or workflow added.
