@@ -1,0 +1,16 @@
+# Build output and tool caches
+build/
+.gradle/
+.git/
+.github/
+bin/
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+!gradle/wrapper/gradle-wrapper.jar
