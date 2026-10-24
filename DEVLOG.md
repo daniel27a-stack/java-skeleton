@@ -325,3 +325,13 @@ names, dependencies; no Dockerfile added to `lib`.
 **Verification:** image `java-skeleton:dev` built from the change; `data` (`gastos`/`expense`) built with `docker build -f ci/docker/Dockerfile` and run as a container: `/actuator/health/liveness` and `/actuator/health/readiness` return 200 `{"status":"UP"}`, `/actuator/health` 200, while `/actuator/info`, `/actuator/env` and `/actuator/metrics` return 404; `/api/expense/v1/private/hello` returns 200 `Hello from gastos-data-expense`, `/hello` returns 404 (200 before), `/api/expense/v1/public/hello` returns 404; the hyphenated name `expense-claims` gives `/api/expense-claims/v1/private/hello`. `./gradlew build` is green for `data`, `edge`, `flow` and `acl` (test, intTest and archTest) and for `lib`. The generated `lib-errors` tree is byte-identical to the baseline (sha256). The Dockerfile has no `HEALTHCHECK` (`docker inspect` shows no healthcheck). `application.yml` of `edge`, `flow` and `acl` differs from `data` only in the name, and their `dependencies.gradle` and `libs.versions.toml` are identical. The runtime classpath gained only Actuator and Micrometer modules; no existing dependency changed version.
 
 **Unchanged:** `java-library` template, `Dockerfile` (no `HEALTHCHECK`), `manifest.json`, flags and prompts, root `README.md`.
+
+## 2026-10-24 — ARQ-72: Pirca banner at startup of REST services
+
+**What:** the `spring-gradle` template adds `src/main/resources/banner.txt` (next to `application.yml.hbs`), copied verbatim because it has no `.hbs` extension. At startup Spring prints the PIRCA drawing, the service name (`${spring.application.name}`) and the Spring Boot version (`${spring-boot.version}`) instead of its default banner. The `java-library` template gets none.
+
+**Why:** generated services should identify themselves as pirca services and show which service and Spring Boot version is running. The file only uses Spring placeholders, so the generator does not need to render it.
+
+**Verification:** image `java-skeleton:dev` rebuilt; `data` (`gastos`/`expense`) and `lib` (`errors`) generated. The generated `banner.txt` is byte-identical to the template (`cmp`) and the `lib` project has no `banner*` file. `./gradlew build` exits 0 in both. The `data` image (`ci/docker/Dockerfile`) was built and run as a container: the first log lines show the PIRCA drawing and `:: Pirca ::  gastos-data-expense  (Spring Boot 4.1.1)`, and `gradle/libs.versions.toml` has `spring-boot = "4.1.1"`. Not run: the app outside a container.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, `application.yml.hbs`, the `java-library` template, root `README.md`.
