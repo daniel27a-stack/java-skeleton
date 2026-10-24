@@ -48,6 +48,21 @@ archTest.excludeLayers=controller,service,repository,client
 Remove a layer from the list as soon as the artifact gets it. Unknown layer names fail the
 build. A rule of a layer that is not excluded fails if the layer has no classes.
 
+## Makefile shortcuts
+
+The `Makefile` holds local shortcuts for the Gradle commands in this README. They are conveniences
+for your machine: CI does not use them. Run `make` with no arguments to list them.
+
+| Shortcut | Equivalent command |
+|----------|--------------------|
+| `make test`     | `./gradlew test`        |
+| `make int`      | `./gradlew intTest`     |
+| `make arch`     | `./gradlew archTest`    |
+| `make build`    | `./gradlew build`       |
+| `make me-happy` | `./gradlew clean build` |
+| `make publish`       | `./gradlew publish`              |
+| `make publish-local` | `./gradlew publishToMavenLocal`  |
+
 ## Publish
 
 Local publishing (to consume it from another project on the same machine):

@@ -64,6 +64,26 @@ archTest.excludeLayers=repository,client
 Remove a layer from the list as soon as the artifact gets it. Unknown layer names fail the
 build. A rule of a layer that is not excluded fails if the layer has no classes.
 
+## Makefile shortcuts
+
+The `Makefile` holds local shortcuts for the Gradle commands above. They are conveniences for your
+machine: CI does not use them. Run `make` with no arguments to list them.
+
+| Shortcut | Equivalent command |
+|----------|--------------------|
+| `make test`     | `./gradlew test`        |
+| `make int`      | `./gradlew intTest`     |
+| `make arch`     | `./gradlew archTest`    |
+| `make build`    | `./gradlew build`       |
+| `make me-happy` | `./gradlew clean build` |
+| `make run`      | `./gradlew bootRun --args=--spring.profiles.active=local` |
+| `make run-cert` | `./gradlew bootRun --args=--spring.profiles.active=cert`  |
+| `make run-prod` | `./gradlew bootRun --args=--spring.profiles.active=prod`  |
+
+`run`, `run-cert` and `run-prod` start the service with the `local`, `cert` or `prod` Spring profile
+(each has its `application-<profile>.yml`). `run-prod` asks for confirmation first; anything other
+than `y` or `yes` aborts.
+
 ## Using pirca libs
 
 The `lib-*` libraries (`cl.pirca.lib.*`) are published to GitHub Packages, which asks for a token
