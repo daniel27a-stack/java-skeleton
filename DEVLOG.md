@@ -335,3 +335,13 @@ names, dependencies; no Dockerfile added to `lib`.
 **Verification:** image `java-skeleton:dev` rebuilt; `data` (`gastos`/`expense`) and `lib` (`errors`) generated. The generated `banner.txt` is byte-identical to the template (`cmp`) and the `lib` project has no `banner*` file. `./gradlew build` exits 0 in both. The `data` image (`ci/docker/Dockerfile`) was built and run as a container: the first log lines show the PIRCA drawing and `:: Pirca ::  gastos-data-expense  (Spring Boot 4.1.1)`, and `gradle/libs.versions.toml` has `spring-boot = "4.1.1"`. Not run: the app outside a container.
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, `application.yml.hbs`, the `java-library` template, root `README.md`.
+
+## 2026-10-24 — ARQ-74: per-environment configuration files
+
+**What:** the `spring-gradle` template adds `src/main/resources/application-local.yml.hbs`, `application-cert.yml.hbs` and `application-prod.yml.hbs` next to `application.yml.hbs`. Each holds only log levels and a comment saying the service adds there what differs in that environment. The levels use the generated `groupId` as the package: `local` root `INFO` / package `DEBUG`, `cert` root `INFO` / package `INFO`, `prod` root `WARN` / package `INFO`.
+
+**Why:** a service needs one place per environment for what changes there, starting from the minimum. No profile is activated by default, so how each environment selects its profile (Dockerfile, deployment, CI) is left to the services.
+
+**Verification:** image rebuilt; `data` (`gastos`/`expense`) and `lib` (`errors`) generated and compared (sha256) with trees generated before the change: the only difference is the three new files in `data`, and `lib` is identical. The rendered files are valid YAML with `cl.pirca.gastos` as the package and no `{{` left; `application.yml` is identical. `./gradlew build` is successful in `data`. The container built from the generated Dockerfile answers `GET /actuator/health/liveness` with `UP` and logs no error with no profile and with `SPRING_PROFILES_ACTIVE` set to `local`, `cert` and `prod` (the log shows each profile active).
+
+**Unchanged:** `application.yml.hbs`, `bin/cli.js`, `manifest.json`, the `java-library` template, `Dockerfile`, `gradle.properties`, root `README.md`.
