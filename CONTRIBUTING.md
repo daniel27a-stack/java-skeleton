@@ -24,6 +24,8 @@ Templates are rendered with Handlebars by `bin/cli.js`.
 - **An `.hbs` file that renders empty is not written.** This lets a file be optional by wrapping it
   in `{{#if}}`. No current template relies on it.
 - **Files without `.hbs` are copied verbatim** (for example `gradlew` and `gradle-wrapper.jar`).
+- **GitHub expressions are escaped**: Handlebars would render `${{ ... }}` (GitHub Actions) as empty, so
+  templates write them as `$\{{ ... }}`; the backslash makes Handlebars output `{{ ... }}` literally.
 - **Variables available to templates**: `groupId`, `artifactId`, `serviceName`, `shortName` (the `--name` value), `javaVersion` and
   `packagePath`. They are derived from the type, product and name (see `README.md`). The Java version
   is not an input: it is the `JAVA_VERSION` constant in `bin/cli.js`, the only place to change it.
@@ -94,6 +96,16 @@ Rules:
   still works when no pirca lib is used. The `lib` template has no Dockerfile.
 
 - Verifying a change needs no token: generated `data` and `lib` projects build without one.
+
+## Generated CI workflow
+
+Both templates carry `.github/workflows/ci.yml.hbs`, so every generated project (service or lib) has
+`.github/workflows/ci.yml`. It runs `./gradlew build` (which includes `test`, `intTest` and `archTest`)
+on every push to a branch and on every pull request to `main`, and nothing else. It uses the run's own
+`GITHUB_TOKEN` with `packages: read` (plus `contents: read`) and passes `GITHUB_ACTOR` and
+`GITHUB_TOKEN` to the build, so pirca libraries download from GitHub Packages with no secret added.
+The Java version is `javaVersion` (`JAVA_VERSION` in `bin/cli.js`). Gradle dependencies are cached by
+`gradle/actions/setup-gradle`, and a newer push to the same ref cancels the run in progress.
 
 ## Making a change
 
