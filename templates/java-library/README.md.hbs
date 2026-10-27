@@ -30,6 +30,12 @@ the `.imports` file. `LibraryAutoConfigurationIntTest` proves the activation.
 
 `./gradlew check` runs the three suites, `test` first. Each suite can also run alone.
 
+### Quality
+
+`./gradlew build` also runs SpotBugs with FindSecBugs on the main code and checks JaCoCo line coverage
+(minimum set by `minimumLineCoverage` in `gradle/quality.gradle`). Mutation testing is slow and runs only by hand:
+`./gradlew pitest` (report in `build/reports/pitest/index.html`).
+
 ### Architecture tests
 
 `ArchitectureTest` enforces the layered design `controller -> service -> repository | client`
