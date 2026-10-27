@@ -1,6 +1,9 @@
 plugins {
     id 'java'
     alias(libs.plugins.spring.boot)
+    id 'jacoco'
+    alias(libs.plugins.spotbugs)
+    alias(libs.plugins.pitest)
 }
 
 group = '{{groupId}}'
@@ -12,4 +15,5 @@ apply from: 'gradle/sources.gradle'
 apply from: 'gradle/dependencies.gradle'
 apply from: 'gradle/constraints.gradle'
 apply from: 'gradle/tests.gradle'
+apply from: 'gradle/quality.gradle'
 apply from: 'gradle/packaging.gradle'

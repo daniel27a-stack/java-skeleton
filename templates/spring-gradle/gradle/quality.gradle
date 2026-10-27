@@ -1,0 +1,62 @@
+// Quality: static analysis (SpotBugs + FindSecBugs), coverage (JaCoCo) and mutation testing (PIT).
+// Plugins are declared in build.gradle; versions live in gradle/libs.versions.toml.
+
+// Minimum line coverage of the `test` task (unit tests). Single place to change the threshold.
+def minimumLineCoverage = 0.80
+
+// SpotBugs + FindSecBugs on main code only; `check` (so `build`) runs spotbugsMain.
+spotbugs {
+    toolVersion = libs.versions.spotbugs.engine.get()
+    ignoreFailures = false
+}
+tasks.matching { it.name.startsWith('spotbugs') && it.name != 'spotbugsMain' }.configureEach {
+    enabled = false
+}
+tasks.named('spotbugsMain') {
+    reports {
+        html { required = true }
+    }
+}
+dependencies {
+    spotbugsPlugins libs.findsecbugs
+}
+
+// JaCoCo measures the `test` task; the report always follows it and `check` enforces the threshold.
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+tasks.named('test') { finalizedBy tasks.named('jacocoTestReport') }
+tasks.named('jacocoTestReport') { dependsOn tasks.named('test') }
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('test')
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = minimumLineCoverage.toBigDecimal()
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
+
+// Application.main only starts Spring and is exercised by no unit test: leave it out of report and rule.
+['jacocoTestReport', 'jacocoTestCoverageVerification'].each { taskName ->
+    tasks.named(taskName) {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(it) { exclude '**/Application.class' }
+        }))
+    }
+}
+
+// PIT (mutation testing) is slow: it is NOT part of build/check/test. Run it by hand: ./gradlew pitest
+pitest {
+    pitestVersion = libs.versions.pitest.engine.get()
+    junit5PluginVersion = libs.versions.pitest.junit5.get()
+    targetClasses = ["${project.group}.*".toString()]
+    mainSourceSets = [sourceSets.main]
+    testSourceSets = [sourceSets.test]
+    outputFormats = ['HTML']
+    timestampedReports = false
+}

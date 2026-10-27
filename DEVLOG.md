@@ -9,7 +9,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 1. ✅ Spring Boot 4 + Java 25
 2. ✅ Gradle split into `gradle/*.gradle`
 3. ✅ `intTest` (WireMock) and `archTest` (ArchUnit) source sets
-4. ⬜ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
+4. ✅ Quality: SpotBugs + FindSecBugs, JaCoCo with threshold, manual PIT
 5. ✅ Actuator: liveness/readiness health + `/api/<artifact>/v1` routes
 6. ✅ Multi-stage `Dockerfile` with Spring Boot layers
 7. ✅ Spring library template (auto-configuration) for `lib-*`
@@ -34,6 +34,7 @@ Log of the steps taken on the generator, in order. Each entry states **what** ch
 | 2026-10-23 | **The registry base URL (host and owner) is one line per generated project: `pirca.registryUrl` in `gradle.properties`**, read with `project.property` by `repositories.gradle` and `publish.gradle` | Switching registry (for example to Artifactory) is a one-line change. A generator option would need a `bin/cli.js` change; a shared Gradle file was rejected because properties are the conventional, overridable place. A missing property fails the build instead of silently falling back to a hard-coded owner |
 | 2026-10-23 | **Route convention `/api/<artifact>/v1/{public,private}/...`**: public/private are URL prefixes (a naming convention; the edge enforces it; `hello` is under `private`, `public` is only a convention for `edge` with no sample); `<artifact>` is the short `--name` value; Actuator exposes only `health` (liveness and readiness probes), outside `/api` | Artifact and version travel in the URL, and external versus service-to-service routes are told apart by name. Health is for the platform, not for API clients |
 | 2026-10-25 | **Generated projects run `./gradlew build` in GitHub Actions** on every push to any branch and on every PR to `main`, with the run's `GITHUB_TOKEN` (`packages: read`, no secret) | Basic feedback on every change, and GitHub Packages reads need only the token. The workflow only calls Gradle, like the rest of the build; the Java version follows `JAVA_VERSION` |
+| 2026-10-26 | **Quality in `gradle/quality.gradle`**: SpotBugs 4.10.5 + FindSecBugs 1.14.0 on main code (in `check`), JaCoCo 0.8.16 over the `test` task with a 80% line threshold in one variable (`minimumLineCoverage`), PIT 1.30.1 (Gradle plugin 1.19.0, JUnit 5 plugin 1.2.3) only by hand with `./gradlew pitest` | The plugins are declared in `build.gradle` `plugins {}` (a Gradle requirement for portal plugins); all configuration is in `quality.gradle`. Versions are in the catalog. Coverage is the unit `test` task, the same source set PIT mutates. PIT is slow, so it stays out of `build` and CI. The service template excludes `Application` from coverage (`main` only starts Spring; without it the sample measures 77%) |
 | 2026-10-12 | **ArchUnit 1.5.1** and **`wiremock-standalone` 3.13.2** (spring-gradle `intTest` only) | The shaded WireMock jar has no transitive dependencies, so it cannot collide with the Spring Boot BOM (Jetty). 4.x is beta only |
 | 2026-10-10 | **Everything inside the repo is written in English** (code, comments, docs, CLI messages, commits) | Standard for the repos; the Spanish texts were translated and `PLAN.md` was removed (it was a closed plan, still available in git history) |
 
@@ -366,3 +367,13 @@ names, dependencies; no Dockerfile added to `lib`.
 **Verification:** image `java-skeleton:dev` rebuilt; `data` (`gastos`/`expense`) and `lib` (`errors`) generated. Both have an identical `.github/workflows/ci.yml` that PyYAML parses (triggers `push` `**` and `pull_request` `main`, permissions `contents: read` and `packages: read`, one job `build`), with `java-version: '25'` and the three `${{ }}` expressions rendered literally. The sha256 lists of both projects equal the baseline except for the new file. `./gradlew build` is successful in both. Control: a copy of the worktree with `JAVA_VERSION` set to `'26'` generated a `lib` whose workflow has `java-version: '26'`, so the value comes from `bin/cli.js`; the worktree itself was not changed. Not run: the workflow on GitHub; the `actions/*` and `gradle/actions/*` major versions were not checked against GitHub.
 
 **Unchanged:** `bin/cli.js`, `manifest.json`, `.dockerignore`, `gradle/*`, `build.gradle`, `gradle.properties`, Dockerfiles, root `README.md`.
+
+## 2026-10-26 — ARQ-13: quality (SpotBugs + FindSecBugs, JaCoCo threshold, manual PIT)
+
+**What:** both templates add `gradle/quality.gradle`, load it from `build.gradle.hbs` after `tests.gradle` (plus the `jacoco`, `com.github.spotbugs` and `info.solidsoft.pitest` entries in `plugins {}`), and add the tool versions to `gradle/libs.versions.toml`. `build` runs `spotbugsMain` (FindSecBugs loaded) and `jacocoTestCoverageVerification` (80% lines); `./gradlew pitest` is manual. The generated `README.md` files mention it. `CONTRIBUTING.md` gets a "Quality" section.
+
+**Why:** step 4 of the template plan: static analysis, a coverage floor and mutation testing, with versions that read Java 25 bytecode. The catalog keys for the engines are `spotbugs-engine` and `pitest-engine` because `spotbugs` and `spotbugs-plugin` as sibling keys collide in the generated accessors.
+
+**Verification:** image rebuilt; `data` (`gastos`/`expense`) and `lib` (`errors`) generated and `./gradlew build` green in both; `javap` shows major version 69 and `--info` output has no "Unsupported class file major version"; `spotbugsMain` fails on a copy with an `MD5` snippet; `build` fails on a copy with an untested class ("lines covered ratio is 0.15, but expected minimum is 0.80"); `./gradlew pitest` runs in both (data 2/2 mutants killed, lib 1/1); `build --dry-run` lists no pitest task.
+
+**Unchanged:** `bin/cli.js`, `manifest.json`, Makefiles, Dockerfiles, wrapper, CI workflows, root `README.md`.

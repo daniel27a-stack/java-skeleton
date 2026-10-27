@@ -100,12 +100,30 @@ Rules:
 ## Generated CI workflow
 
 Both templates carry `.github/workflows/ci.yml.hbs`, so every generated project (service or lib) has
-`.github/workflows/ci.yml`. It runs `./gradlew build` (which includes `test`, `intTest` and `archTest`)
+`.github/workflows/ci.yml`. It runs `./gradlew build` (which includes `test`, `intTest`, `archTest`, SpotBugs and the coverage rule)
 on every push to a branch and on every pull request to `main`, and nothing else. It uses the run's own
 `GITHUB_TOKEN` with `packages: read` (plus `contents: read`) and passes `GITHUB_ACTOR` and
 `GITHUB_TOKEN` to the build, so pirca libraries download from GitHub Packages with no secret added.
 The Java version is `javaVersion` (`JAVA_VERSION` in `bin/cli.js`). Gradle dependencies are cached by
 `gradle/actions/setup-gradle`, and a newer push to the same ref cancels the run in progress.
+
+## Quality
+
+Both templates carry `gradle/quality.gradle` (loaded from `build.gradle` after `tests.gradle`; the plugins
+are declared in its `plugins {}` block and the tool versions live in `gradle/libs.versions.toml`).
+
+- `./gradlew build` (through `check`) runs **SpotBugs with FindSecBugs** on the main code only
+  (`spotbugsMain`; the test source sets are skipped) and the **JaCoCo** coverage rule over the `test`
+  task. The HTML reports are `build/reports/spotbugs/main.html` and `build/reports/jacoco/test/html/index.html`.
+- The build fails when line coverage is below the minimum. The threshold is one line,
+  `def minimumLineCoverage = 0.80`, at the top of `gradle/quality.gradle` (one copy per template). In the
+  service template `Application` is excluded from coverage because it only starts Spring.
+- **PIT** (mutation testing) is configured but is not part of `build`, `check`, `test` or CI. Run it by
+  hand in a generated project with `./gradlew pitest`; it mutates main code using the `test` source set
+  (report in `build/reports/pitest/index.html`).
+- The tool versions must read Java 25 bytecode (SpotBugs 4.10.5, JaCoCo 0.8.16, PIT 1.30.1). When
+  `JAVA_VERSION` moves, check them again: build a generated project and make sure no
+  "Unsupported class file major version" appears.
 
 ## Making a change
 
